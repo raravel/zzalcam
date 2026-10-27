@@ -1,0 +1,9 @@
+[package]
+name = "zzalcam-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+lz4_flex.workspace = true

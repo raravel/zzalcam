@@ -1,0 +1,13 @@
+[package]
+name = "zzalcam-encode"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+zzalcam-core.workspace = true
+thiserror.workspace = true
+rayon.workspace = true
+imagequant.workspace = true
+gif.workspace = true
+libwebp-sys.workspace = true

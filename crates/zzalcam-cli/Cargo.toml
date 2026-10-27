@@ -1,0 +1,17 @@
+[package]
+name = "zzalcam-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "zzalcam"
+path = "src/main.rs"
+
+[dependencies]
+zzalcam-core.workspace = true
+zzalcam-encode.workspace = true
+zzalcam-capture.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+ctrlc.workspace = true

@@ -1,0 +1,7 @@
+/target
+.omc/
+graft/
+*.gif
+*.webp
+!docs/**/*.gif
+!docs/**/*.webp
