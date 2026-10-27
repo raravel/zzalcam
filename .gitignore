@@ -5,3 +5,6 @@ graft/
 *.webp
 !docs/**/*.gif
 !docs/**/*.webp
+app/node_modules/
+app/dist/
+app/src-tauri/gen/

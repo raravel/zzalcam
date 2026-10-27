@@ -13,7 +13,7 @@ pub struct HighResTimer(HANDLE);
 
 impl HighResTimer {
     pub fn new() -> windows::core::Result<Self> {
-        // The high-resolution flag needs Windows 10 1803+, below our 1903 minimum.
+        // The high-resolution flag needs Windows 10 1803+, below our 2004 minimum.
         let h = unsafe {
             CreateWaitableTimerExW(
                 None,

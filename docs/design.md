@@ -6,7 +6,7 @@ License: GPL-3.0.
 ## 1. Product shape
 
 - Rust core library shared by a **GUI** (Tauri 2 + Svelte 5 + TypeScript, tray-resident) and a **CLI**.
-- Target: Windows 10 1903+ (x64), Per-Monitor DPI Aware v2.
+- Target: Windows 10 2004+ (x64), Per-Monitor DPI Aware v2. 2004 is the first build where `WDA_EXCLUDEFROMCAPTURE` keeps our overlays out of recordings.
 - Outputs: GIF and animated WebP only. Encoders sit behind a trait so APNG/MP4 can be added later. No audio.
 - UI languages: Korean, English (i18n from day one).
 
@@ -31,6 +31,25 @@ License: GPL-3.0.
 - Recording border and control bar are visible but excluded from capture (`WDA_EXCLUDEFROMCAPTURE`).
 - Options: include cursor, click highlight, fps 5–60 (default 15), output scale.
 - Selection overlay is a **native Win32 layered window per monitor** (magnifier, coordinates/size readout, pixel-precise keyboard nudging). Settings/editor UI is Tauri.
+
+### M2 decisions
+
+- **Layout**: Tauri 2 app in `app/` (`app/src-tauri` is a workspace member calling the core crates in-process; UI is Svelte 5 + TypeScript + Vite, pnpm). Native overlays live in the `zzalcam-overlay` crate.
+- **Unified selection overlay** (one layered window per monitor, Direct2D, live desktop dimmed with the selection cut out, live magnifier): drag = region, hover + click = window, `Tab` = control mode (wheel walks parent/child), `F` = monitor under cursor, `A` = all monitors, `Enter` confirm, `Esc` cancel. The tray menu also enters each mode directly.
+- **Default hotkeys** (one-handed, left hand; rebindable; registration failures are flagged as conflicts in settings):
+
+  | Action | Hotkey |
+  |---|---|
+  | Select & record / stop | `Alt+Shift+1` |
+  | Pause / resume | `Alt+Shift+2` |
+  | Record last target again | `Alt+Shift+3` |
+  | Cancel recording (discard) | `Alt+Shift+X` |
+
+- **Cancel undo**: the last cancelled session is kept until the next recording starts; the toast offers "Undo".
+- **Control bar** just outside the recorded area (below; above or a screen corner if there is no room): elapsed time, frame count, estimated size, pause / stop / cancel. Bar and border are excluded from capture.
+- **After stop (M2)**: encode with the default preset to `Pictures\zzalcam\`, copy the file to the clipboard (CF_HDROP), show a toast (click opens the folder).
+- **Settings window**: hotkeys, fps, cursor, format, preset, output folder. All strings are i18n keys from the start (ko, en).
+- **Single instance**; closing the window hides to tray, quit only from the tray menu.
 
 ## 4. Session storage
 

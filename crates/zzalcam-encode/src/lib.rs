@@ -22,6 +22,13 @@ impl Format {
         }
     }
 
+    pub fn extension(self) -> &'static str {
+        match self {
+            Format::Gif => "gif",
+            Format::WebP => "webp",
+        }
+    }
+
     /// Largest width or height the container can store.
     pub fn max_dimension(self) -> u32 {
         match self {
@@ -81,6 +88,20 @@ impl Preset {
                 ..base
             },
         }
+    }
+}
+
+/// Encode `src` into `out` in `format` with a preset's settings.
+pub fn encode_with_preset<W: std::io::Write>(
+    src: &dyn zzalcam_core::FrameSource,
+    format: Format,
+    preset: Preset,
+    out: W,
+    progress: Progress,
+) -> Result<EncodeStats, EncodeError> {
+    match format {
+        Format::Gif => gif::encode(src, &preset.gif(), out, progress),
+        Format::WebP => webp::encode(src, &preset.webp(), out, progress),
     }
 }
 

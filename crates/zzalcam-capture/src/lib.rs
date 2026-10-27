@@ -14,12 +14,12 @@ mod enumerate;
 mod timer;
 mod wgc;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use zzalcam_core::SessionWriter;
 
-pub use enumerate::{Monitor, WindowInfo, monitors, virtual_desktop, windows};
+pub use enumerate::{Monitor, WindowInfo, monitors, virtual_desktop, window_bounds, windows};
 
 /// Rectangle in virtual-desktop physical pixels (may be negative left of / above the primary monitor).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,6 +112,10 @@ pub fn open(target: &Target, opts: &CaptureOptions) -> Result<Box<dyn Capturer>,
 pub struct RecordControl {
     pub stop: AtomicBool,
     pub paused: AtomicBool,
+    /// Live progress, updated every tick.
+    pub elapsed_ms: AtomicU64,
+    pub frames: AtomicUsize,
+    pub session_bytes: AtomicU64,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -147,6 +151,8 @@ pub fn record(
             paused_total += now - p;
         }
         let elapsed = now - start - paused_total - paused_since.map_or(Duration::ZERO, |p| now - p);
+        ctl.elapsed_ms
+            .store(elapsed.as_millis() as u64, Ordering::Relaxed);
         if ctl.stop.load(Ordering::Relaxed)
             || cap.ended()
             || max_duration.is_some_and(|d| elapsed >= d)
@@ -162,6 +168,9 @@ pub fn record(
             if changed || first {
                 if writer.push(cap.canvas(), elapsed.as_millis() as u64)? {
                     stats.frames_written += 1;
+                    ctl.frames.store(stats.frames_written, Ordering::Relaxed);
+                    ctl.session_bytes
+                        .store(writer.bytes_written(), Ordering::Relaxed);
                 }
                 first = false;
             }

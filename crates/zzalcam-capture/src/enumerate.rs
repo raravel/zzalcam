@@ -108,6 +108,11 @@ pub fn virtual_desktop() -> Result<ScreenRect, Error> {
     })
 }
 
+/// Visible bounds of a top-level window (by handle) without the invisible resize border.
+pub fn window_bounds(hwnd: isize) -> Option<ScreenRect> {
+    window_rect(HWND(hwnd as *mut _))
+}
+
 /// Visible bounds of a window without the invisible resize border.
 pub(crate) fn window_rect(hwnd: HWND) -> Option<ScreenRect> {
     let mut r = RECT::default();

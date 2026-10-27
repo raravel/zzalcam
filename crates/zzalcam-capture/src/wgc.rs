@@ -58,7 +58,7 @@ impl WindowCapturer {
         let _ = unsafe { RoInitialize(RO_INIT_MULTITHREADED) };
         if !GraphicsCaptureSession::IsSupported()? {
             return Err(Error::Unsupported(
-                "Windows.Graphics.Capture requires Windows 10 1903 or later",
+                "Windows.Graphics.Capture requires Windows 10 2004 or later",
             ));
         }
 

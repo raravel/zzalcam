@@ -37,6 +37,7 @@ pub struct SessionWriter {
     frames: usize,
     last_ts: u64,
     last_flush_ts: Option<u64>,
+    bytes: u64,
 }
 
 impl SessionWriter {
@@ -54,11 +55,17 @@ impl SessionWriter {
             frames: 0,
             last_ts: 0,
             last_flush_ts: None,
+            bytes: 0,
         })
     }
 
     pub fn frame_count(&self) -> usize {
         self.frames
+    }
+
+    /// Compressed frame bytes written so far.
+    pub fn bytes_written(&self) -> u64 {
+        self.bytes
     }
 
     /// Append a full RGBA canvas. Returns `false` if it was identical to the previous frame and skipped.
@@ -94,6 +101,7 @@ impl SessionWriter {
             self.out.write_all(&v.to_le_bytes())?;
         }
         self.out.write_all(&packed)?;
+        self.bytes += packed.len() as u64;
 
         if self.prev.len() == rgba.len() {
             blit(&mut self.prev, self.width, rect, &raw);

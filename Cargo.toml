@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/*"]
+members = ["crates/*", "app/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ repository = "https://github.com/raravel/zzalcam"
 zzalcam-core = { path = "crates/zzalcam-core" }
 zzalcam-encode = { path = "crates/zzalcam-encode" }
 zzalcam-capture = { path = "crates/zzalcam-capture" }
+zzalcam-overlay = { path = "crates/zzalcam-overlay" }
 anyhow = "1"
 thiserror = "2"
 lz4_flex = "0.14"

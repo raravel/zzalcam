@@ -1,0 +1,55 @@
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --border: #e3e6eb;
+  --text: #1b1f24;
+  --muted: #687080;
+  --accent: #2f80ed;
+  --accent-text: #ffffff;
+  --danger: #e5484d;
+  --warning: #d97706;
+  --hud: rgba(22, 24, 30, 0.92);
+  --hud-text: #f2f4f8;
+  --radius: 10px;
+  font-family: "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", system-ui, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17191d;
+    --surface: #202328;
+    --border: #30343b;
+    --text: #e8eaee;
+    --muted: #9aa2b0;
+    --accent: #4c94f5;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  user-select: none;
+}
+
+body {
+  background: var(--bg);
+}
+
+/* The control bar and toast windows are transparent; only their panel is painted. */
+body.hud {
+  background: transparent;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
