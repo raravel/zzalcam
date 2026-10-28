@@ -20,7 +20,10 @@
   --scroll: #8a8a8a;
   --scroll-hover: #6e6e6e;
   --switch-off: #8a8a8a;
-  --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%23616161' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --flyout: #f9f9f9;
+  --flyout-border: #e0e0e0;
+  --item-hover: rgba(0, 0, 0, 0.04);
+  --item-selected: rgba(0, 0, 0, 0.03);
   --hud: rgba(28, 28, 28, 0.94);
   --hud-text: #f5f5f5;
   --hud-muted: #b4b4b4;
@@ -52,7 +55,10 @@
     --scroll: #9a9a9a;
     --scroll-hover: #c5c5c5;
     --switch-off: #c5c5c5;
-    --chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%23c5c5c5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    --flyout: #2c2c2c;
+    --flyout-border: #1f1f1f;
+    --item-hover: rgba(255, 255, 255, 0.06);
+    --item-selected: rgba(255, 255, 255, 0.04);
   }
 }
 
@@ -199,7 +205,6 @@ button {
 }
 
 /* --- inputs */
-select,
 input[type="text"],
 input[type="number"],
 input:not([type]) {
@@ -213,7 +218,6 @@ input:not([type]) {
   color: inherit;
   transition: background 0.1s;
 }
-select:hover,
 input[type="text"]:hover,
 input[type="number"]:hover,
 input:not([type]):hover {
@@ -229,15 +233,6 @@ input:not([type]):focus {
 }
 input::placeholder {
   color: var(--muted);
-}
-select {
-  appearance: none;
-  padding-right: 32px;
-  background-image: var(--chevron);
-  background-repeat: no-repeat;
-  background-position: right 9px center;
-  background-size: 14px;
-  cursor: pointer;
 }
 
 /* Every checkbox in the app is an on/off setting, shown as a switch. */

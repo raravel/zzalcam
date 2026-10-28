@@ -18,6 +18,7 @@
   } from "@lucide/svelte";
   import { t } from "../lib/i18n.svelte";
   import { humanSize } from "../lib/types";
+  import Select from "./Select.svelte";
 
   interface ExportSettings {
     format: "gif" | "webp";
@@ -320,7 +321,7 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "SELECT") return;
+    if ((e.target as HTMLElement).tagName === "INPUT") return;
     const ctrl = e.ctrlKey || e.metaKey;
     if (ctrl && e.key.toLowerCase() === "z") (e.preventDefault(), undo());
     else if (ctrl && e.key.toLowerCase() === "y") (e.preventDefault(), redo());
@@ -406,20 +407,27 @@
           <button class:active={out.format === f} onclick={() => (out.format = f)}>{f.toUpperCase()}</button>
         {/each}
       </div>
-      <label>
+      <div class="field">
         {t("settings.preset")}
-        <select bind:value={out.preset}>
-          {#each ["best", "balanced", "smallest"] as p}<option value={p}>{t(`settings.preset.${p}`)}</option>{/each}
-        </select>
-      </label>
-      <label>
+        <Select
+          wide
+          label={t("settings.preset")}
+          bind:value={out.preset}
+          options={(["best", "balanced", "smallest"] as const).map((p) => ({ value: p, label: t(`settings.preset.${p}`) }))}
+        />
+      </div>
+      <div class="field">
         {t("editor.scale")}
-        <select bind:value={out.scale}>
-          {#each SCALES as s}
-            <option value={s}>{Math.round(s * 100)}% · {Math.round((edit.crop?.w ?? info.width) * s)}×{Math.round((edit.crop?.h ?? info.height) * s)}</option>
-          {/each}
-        </select>
-      </label>
+        <Select
+          wide
+          label={t("editor.scale")}
+          bind:value={out.scale}
+          options={SCALES.map((s) => ({
+            value: s,
+            label: `${Math.round(s * 100)}% · ${Math.round((edit.crop?.w ?? info!.width) * s)}×${Math.round((edit.crop?.h ?? info!.height) * s)}`,
+          }))}
+        />
+      </div>
       <label>
         {t("editor.max_size")}
         <span class="unit-input">
@@ -623,15 +631,17 @@
     font-weight: 600;
     margin: 6px 0 0;
   }
-  label {
+  label,
+  .field {
     display: flex;
     flex-direction: column;
     gap: 4px;
     font-size: 12px;
     color: var(--muted);
   }
-  label select,
-  label input {
+  label input,
+  .field :global(.select),
+  .field :global(.select-list) {
     color: var(--text);
     font-size: 13px;
   }

@@ -7,6 +7,7 @@
   import { t } from "../lib/i18n.svelte";
   import type { Hotkeys, Settings } from "../lib/types";
   import HotkeyInput from "./HotkeyInput.svelte";
+  import Select from "./Select.svelte";
 
   const FPS = [5, 10, 15, 20, 24, 30, 50, 60];
   const HOTKEYS: (keyof Hotkeys)[] = ["record", "pause", "repeat", "cancel"];
@@ -64,19 +65,18 @@
     <section>
       <h2>{t("settings.capture")}</h2>
       <div class="card">
-        <label class="row">
+        <div class="row">
           <span>{t("settings.fps")}</span>
-          <select bind:value={settings.fps}>
-            {#each FPS as f}<option value={f}>{f}</option>{/each}
-          </select>
-        </label>
-        <label class="row">
+          <Select label={t("settings.fps")} bind:value={settings.fps} options={FPS.map((f) => ({ value: f, label: String(f) }))} />
+        </div>
+        <div class="row">
           <span>{t("settings.after_record")}</span>
-          <select bind:value={settings.after_record}>
-            <option value="editor">{t("settings.after_record.editor")}</option>
-            <option value="save">{t("settings.after_record.save")}</option>
-          </select>
-        </label>
+          <Select
+            label={t("settings.after_record")}
+            bind:value={settings.after_record}
+            options={(["editor", "save"] as const).map((v) => ({ value: v, label: t(`settings.after_record.${v}`) }))}
+          />
+        </div>
         <label class="row">
           <span>{t("settings.cursor")}</span>
           <input type="checkbox" bind:checked={settings.cursor} />
@@ -99,20 +99,22 @@
             {/each}
           </div>
         </div>
-        <label class="row">
+        <div class="row">
           <span>{t("settings.preset")}</span>
-          <select bind:value={settings.preset}>
-            {#each ["best", "balanced", "smallest"] as p}
-              <option value={p}>{t(`settings.preset.${p}`)}</option>
-            {/each}
-          </select>
-        </label>
-        <label class="row">
+          <Select
+            label={t("settings.preset")}
+            bind:value={settings.preset}
+            options={(["best", "balanced", "smallest"] as const).map((p) => ({ value: p, label: t(`settings.preset.${p}`) }))}
+          />
+        </div>
+        <div class="row">
           <span>{t("settings.scale")}</span>
-          <select bind:value={settings.export_scale}>
-            {#each [1, 0.75, 0.5, 0.33] as s}<option value={s}>{Math.round(s * 100)}%</option>{/each}
-          </select>
-        </label>
+          <Select
+            label={t("settings.scale")}
+            bind:value={settings.export_scale}
+            options={[1, 0.75, 0.5, 0.33].map((s) => ({ value: s, label: `${Math.round(s * 100)}%` }))}
+          />
+        </div>
         <label class="row">
           <span>{t("settings.max_size")}</span>
           <span class="unit-input">
@@ -167,14 +169,18 @@
     <section>
       <h2>{t("settings.general")}</h2>
       <div class="card">
-        <label class="row">
+        <div class="row">
           <span>{t("settings.language")}</span>
-          <select bind:value={settings.language}>
-            <option value="auto">{t("settings.language.auto")}</option>
-            <option value="ko">한국어</option>
-            <option value="en">English</option>
-          </select>
-        </label>
+          <Select
+            label={t("settings.language")}
+            bind:value={settings.language}
+            options={[
+              { value: "auto", label: t("settings.language.auto") },
+              { value: "ko", label: "한국어" },
+              { value: "en", label: "English" },
+            ]}
+          />
+        </div>
         <label class="row">
           <span>{t("settings.autostart")}</span>
           <input type="checkbox" bind:checked={settings.autostart} />
