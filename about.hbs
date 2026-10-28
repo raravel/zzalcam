@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>zzalcam — third-party licenses</title>
+  <style>
+    body { font: 14px/1.5 "Segoe UI", system-ui, sans-serif; max-width: 920px; margin: 32px auto; padding: 0 16px; color: #1b1f24; }
+    h1 { font-size: 22px; } h2 { font-size: 16px; margin-top: 32px; }
+    ul.used-by { color: #555; font-size: 13px; }
+    pre { white-space: pre-wrap; background: #f6f7f9; padding: 12px; border-radius: 6px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Third-party licenses</h1>
+  <p>zzalcam is licensed under the GNU GPL v3 or later. It includes the following open source software.</p>
+  <h2>Web UI</h2>
+  <ul class="used-by">
+    <li>Svelte — MIT</li>
+    <li>@tauri-apps/api, @tauri-apps/plugin-dialog — MIT or Apache-2.0</li>
+  </ul>
+  <h2>Bundled C libraries</h2>
+  <ul class="used-by">
+    <li>libwebp (compiled in through libwebp-sys) — BSD-3-Clause, Copyright (c) 2010, Google Inc.
+      — <a href="https://chromium.googlesource.com/webm/libwebp/+/refs/heads/main/COPYING">license text</a></li>
+  </ul>
+  <h2>Overview</h2>
+  <ul>
+  {{#each overview}}
+    <li><a href="#{{id}}">{{name}}</a> ({{count}})</li>
+  {{/each}}
+  </ul>
+  {{#each licenses}}
+  <h2 id="{{id}}">{{name}}</h2>
+  <ul class="used-by">
+    {{#each used_by}}
+    <li><a href="{{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}}">{{crate.name}} {{crate.version}}</a></li>
+    {{/each}}
+  </ul>
+  <pre>{{text}}</pre>
+  {{/each}}
+</body>
+</html>

@@ -8,3 +8,4 @@ graft/
 app/node_modules/
 app/dist/
 app/src-tauri/gen/
+THIRD_PARTY_LICENSES.html

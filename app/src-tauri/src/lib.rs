@@ -7,10 +7,12 @@ mod editor;
 mod hotkeys;
 mod i18n;
 mod output;
+mod paths;
 mod recorder;
 mod settings;
 mod tray;
 mod ui;
+mod updater;
 
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -40,6 +42,8 @@ pub struct AppState {
     pub recovery: Mutex<Vec<PathBuf>>,
     /// The toast page is listening; before that, emitted toasts would be lost.
     pub toast_ready: AtomicBool,
+    /// Saves running outside the recorder (editor exports, recovery saves).
+    pub exports: std::sync::atomic::AtomicUsize,
 }
 
 #[tauri::command]
@@ -138,6 +142,27 @@ fn undo_cancel(state: State<AppState>) {
     state.controller.undo_cancel();
 }
 
+/// Counts a running export in `AppState::exports` for as long as it lives.
+pub struct ExportGuard(AppHandle);
+
+impl ExportGuard {
+    pub fn new(app: &AppHandle) -> Self {
+        app.state::<AppState>()
+            .exports
+            .fetch_add(1, Ordering::Relaxed);
+        Self(app.clone())
+    }
+}
+
+impl Drop for ExportGuard {
+    fn drop(&mut self) {
+        self.0
+            .state::<AppState>()
+            .exports
+            .fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
 /// Show the recovery prompt if startup found unsaved sessions.
 fn offer_recovery(app: &AppHandle) {
     let count = app.state::<AppState>().recovery.lock().unwrap().len();
@@ -180,6 +205,7 @@ async fn recover(app: AppHandle, action: String) -> Result<(), String> {
         } else {
             // Encoding takes a while: show progress and keep it off the async runtime.
             ui::toast(&app, ui::Toast::encoding(&i));
+            let _busy = ExportGuard::new(&app);
             let (app, s, i2, path) = (
                 app.clone(),
                 s.clone(),
@@ -236,6 +262,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,
@@ -264,6 +291,7 @@ pub fn run() {
                 editors: editor::Editors::default(),
                 recovery: Mutex::new(Vec::new()),
                 toast_ready: AtomicBool::new(false),
+                exports: Default::default(),
             });
             {
                 let output = handle
@@ -291,9 +319,15 @@ pub fn run() {
             }
             // Windows are created only now: their pages call commands that need AppState.
             for w in &app.config().app.windows {
-                tauri::WebviewWindowBuilder::from_config(&handle, w)?.build()?;
+                let mut builder = tauri::WebviewWindowBuilder::from_config(&handle, w)?;
+                if let Some(dir) = paths::webview_dir() {
+                    builder = builder.data_directory(dir);
+                }
+                builder.build()?;
             }
             ui::exclude_windows(&handle);
+            app.manage(updater::Pending::default());
+            updater::spawn(handle.clone());
             std::thread::spawn(zzalcam_overlay::warm_up);
             tray::create(&handle, &lang)?;
             let conflicts = hotkeys::apply(&handle, &hk);
@@ -326,6 +360,8 @@ pub fn run() {
             reveal,
             recover,
             toast_ready,
+            updater::install_update,
+            updater::is_portable,
             editor::editor_info,
             editor::editor_estimate,
             editor::editor_save,

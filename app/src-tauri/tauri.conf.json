@@ -67,6 +67,18 @@
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/icon.ico"
-    ]
+    ],
+    "licenseFile": "../../LICENSE"
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU1RDczMDExMjFGODQ0REEKUldUYVJQZ2hFVERYNVNPUHBuMzQ5UmczZVh3ZzFheTZWd2UraWRaY2lEK1BqY05CWlpheGZhR24K",
+      "endpoints": [
+        "https://github.com/raravel/zzalcam/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

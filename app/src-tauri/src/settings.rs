@@ -54,6 +54,8 @@ pub struct Settings {
     /// Default size target in MB; `None` = no limit.
     pub max_size_mb: Option<f64>,
     pub autostart: bool,
+    /// Check GitHub Releases for updates (ignored in portable mode).
+    pub auto_update: bool,
 }
 
 impl Default for Settings {
@@ -73,6 +75,7 @@ impl Default for Settings {
             export_scale: 1.0,
             max_size_mb: None,
             autostart: false,
+            auto_update: true,
         }
     }
 }
@@ -136,10 +139,7 @@ fn default_output_dir(app: &AppHandle) -> PathBuf {
 }
 
 fn file(app: &AppHandle) -> PathBuf {
-    app.path()
-        .app_config_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join("settings.json")
+    crate::paths::config_dir(app).join("settings.json")
 }
 
 pub fn load(app: &AppHandle) -> Settings {

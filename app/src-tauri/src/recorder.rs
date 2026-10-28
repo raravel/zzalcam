@@ -113,6 +113,11 @@ impl Controller {
         I18n::new(&self.settings().language)
     }
 
+    /// Nothing is being picked, recorded or encoded.
+    pub fn is_idle(&self) -> bool {
+        matches!(*self.phase.lock().unwrap(), Phase::Idle)
+    }
+
     fn set_idle(&self) {
         *self.phase.lock().unwrap() = Phase::Idle;
     }
@@ -482,7 +487,7 @@ impl Controller {
 }
 
 pub fn session_dir(app: &AppHandle) -> anyhow::Result<PathBuf> {
-    let dir = app.path().app_local_data_dir()?.join("sessions");
+    let dir = crate::paths::data_dir(app).join("sessions");
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
 }

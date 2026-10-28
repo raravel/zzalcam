@@ -141,6 +141,25 @@ impl Toast {
         }
     }
 
+    /// A newer version is available.
+    pub fn update(i: &I18n, version: &str) -> Self {
+        Self {
+            kind: "update",
+            title: i.tf("toast.update", &[("version", version)]),
+            detail: String::new(),
+            path: None,
+        }
+    }
+
+    pub fn installing(i: &I18n) -> Self {
+        Self {
+            kind: "encoding",
+            title: i.t("toast.installing"),
+            detail: String::new(),
+            path: None,
+        }
+    }
+
     /// Unsaved recordings found at startup.
     pub fn recovery(i: &I18n, count: usize) -> Self {
         Self {

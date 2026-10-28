@@ -134,7 +134,26 @@ pub fn encode_still(
 }
 
 /// Encode `src` as an animated WebP into `out`.
+///
+/// Lossless and mixed modes (every preset) use the parallel pipeline in [`crate::webp_mux`]. Pure
+/// lossy keeps libwebp's `WebPAnimEncoder`: it treats near-identical pixels as unchanged in lossy
+/// mode, which on screen recordings beats our per-frame diff by about a third.
 pub fn encode<W: Write>(
+    src: &dyn FrameSource,
+    opts: &WebpOptions,
+    out: W,
+    progress: Progress,
+) -> Result<EncodeStats, EncodeError> {
+    match opts.mode {
+        WebpMode::Lossy { .. } => encode_anim(src, opts, out, progress),
+        WebpMode::Lossless | WebpMode::Mixed { .. } => {
+            crate::webp_mux::encode(src, opts, out, progress)
+        }
+    }
+}
+
+/// Animated WebP through libwebp's single-threaded `WebPAnimEncoder`.
+fn encode_anim<W: Write>(
     src: &dyn FrameSource,
     opts: &WebpOptions,
     mut out: W,

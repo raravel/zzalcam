@@ -20,6 +20,7 @@ export interface Settings {
   export_scale: number;
   max_size_mb: number | null;
   autostart: boolean;
+  auto_update: boolean;
 }
 
 export interface RecStats {
@@ -30,7 +31,7 @@ export interface RecStats {
 }
 
 export interface Toast {
-  kind: "encoding" | "saved" | "cancelled" | "failed" | "warning" | "recovery";
+  kind: "encoding" | "saved" | "cancelled" | "failed" | "warning" | "recovery" | "update";
   title: string;
   detail: string;
   path: string | null;

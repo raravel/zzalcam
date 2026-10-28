@@ -1,0 +1,7 @@
+{
+  "gif_balanced.gif": { "secs": 2.155, "bytes": 1214724 },
+  "gif_smallest.gif": { "secs": 2.134, "bytes": 1171010 },
+  "gif_best.gif": { "secs": 1.505, "bytes": 1183503 },
+  "webp_balanced.webp": { "secs": 0.937, "bytes": 287488 },
+  "webp_smallest.webp": { "secs": 0.926, "bytes": 287488 }
+}

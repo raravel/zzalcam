@@ -14,6 +14,7 @@
   let settings = $state<Settings | null>(null);
   let conflicts = $state<string[]>([]);
   let savedFlash = $state(false);
+  let portable = $state(false);
   let timer: ReturnType<typeof setTimeout> | undefined;
   let lastSaved = "";
 
@@ -21,6 +22,7 @@
     settings = await invoke<Settings>("get_settings");
     lastSaved = JSON.stringify(settings);
     conflicts = await invoke<string[]>("get_conflicts");
+    portable = await invoke<boolean>("is_portable");
   });
 
   // Save shortly after any change.
@@ -155,6 +157,13 @@
       <label class="row">
         <span>{t("settings.autostart")}</span>
         <input type="checkbox" bind:checked={settings.autostart} />
+      </label>
+      <label class="row">
+        <span>
+          {t("settings.auto_update")}
+          {#if portable}<em class="hint">{t("settings.portable")}</em>{/if}
+        </span>
+        <input type="checkbox" bind:checked={settings.auto_update} disabled={portable} />
       </label>
     </section>
   </main>

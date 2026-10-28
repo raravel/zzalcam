@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      # The Tauri crate embeds app/dist at compile time, so the UI is built first.
+      - name: UI
+        working-directory: app
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm check
+          pnpm build
+
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --workspace
+
+      - name: Benchmark
+        shell: bash
+        run: |
+          cargo run --release -p zzalcam-encode --example bench -- --json bench-result.json
+          python bench/compare.py bench/baseline.json bench-result.json

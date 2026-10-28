@@ -13,7 +13,11 @@ use zzalcam_encode::webp::WebpMode;
 use zzalcam_encode::{EncodeStats, Format, Preset};
 
 #[derive(Parser)]
-#[command(name = "zzalcam", version, about = "Fast GIF / WebP screen recorder")]
+#[command(
+    name = "zzalcam-cli",
+    version,
+    about = "Fast GIF / WebP screen recorder"
+)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -101,7 +105,39 @@ struct EncodeArgs {
     /// WebP compression mode
     #[arg(long, value_enum)]
     webp_mode: Option<WebpModeArg>,
+    /// Output scale, e.g. 0.5 for half size (uses preset settings)
+    #[arg(long, value_parser = parse_scale, conflicts_with_all = FINE_TUNING)]
+    scale: Option<f32>,
+    /// Keep the file under this size, e.g. 8MB or 500KB (lowers quality, fps or size as needed;
+    /// uses preset settings)
+    #[arg(long, value_parser = parse_size, conflicts_with_all = FINE_TUNING)]
+    max_size: Option<u64>,
 }
+
+fn parse_scale(s: &str) -> Result<f32, String> {
+    match s.trim().parse::<f32>() {
+        Ok(v) if (0.05..=1.0).contains(&v) => Ok(v),
+        _ => Err("scale must be between 0.05 and 1".into()),
+    }
+}
+
+fn parse_size(s: &str) -> Result<u64, String> {
+    let t = s.trim().to_ascii_uppercase();
+    let (num, mult) = if let Some(n) = t.strip_suffix("MB") {
+        (n, 1u64 << 20)
+    } else if let Some(n) = t.strip_suffix("KB") {
+        (n, 1 << 10)
+    } else {
+        (t.strip_suffix('B').unwrap_or(&t), 1)
+    };
+    match num.trim().parse::<f64>() {
+        Ok(v) if v.is_finite() && v > 0.0 => Ok((v * mult as f64) as u64),
+        _ => Err(format!("bad size: {s} (use e.g. 8MB or 500KB)")),
+    }
+}
+
+/// Per-setting overrides, which the scale / size-target pipeline does not take.
+const FINE_TUNING: [&str; 5] = ["colors", "dither", "tolerance", "quality", "webp_mode"];
 
 #[derive(Clone, Copy, ValueEnum)]
 enum PresetArg {
@@ -333,7 +369,11 @@ fn encode(src: &dyn FrameSource, args: &EncodeArgs) -> Result<()> {
     let file = BufWriter::new(
         File::create(&partial).with_context(|| format!("creating {}", partial.display()))?,
     );
-    let stats = encode_to(src, args, format, preset, file, &progress);
+    let stats = if args.max_size.is_some() || args.scale.is_some() {
+        export_to(src, args, format, preset, file, &progress)
+    } else {
+        encode_to(src, args, format, preset, file, &progress)
+    };
     let stats = match stats {
         Ok(s) => {
             std::fs::rename(&partial, &args.output)
@@ -365,6 +405,35 @@ fn encode(src: &dyn FrameSource, args: &EncodeArgs) -> Result<()> {
         started.elapsed().as_secs_f64()
     );
     Ok(())
+}
+
+/// Through the export pipeline: scaling and the size target.
+fn export_to(
+    src: &dyn FrameSource,
+    args: &EncodeArgs,
+    format: Format,
+    preset: Preset,
+    mut file: impl Write,
+    progress: zzalcam_encode::Progress,
+) -> Result<EncodeStats> {
+    let opts = zzalcam_encode::export::ExportOptions {
+        format,
+        preset,
+        scale: args.scale.unwrap_or(1.0),
+        max_fps: None,
+        max_bytes: args.max_size,
+    };
+    let (bytes, report) = zzalcam_encode::export::export(src, &opts, progress)?;
+    file.write_all(&bytes)?;
+    file.flush()?;
+    if !report.adjustments.is_empty() {
+        eprintln!();
+        eprintln!("Adjusted to fit the size target: {:?}", report.adjustments);
+    }
+    if report.over_target {
+        eprintln!("Warning: could not get under the size target");
+    }
+    Ok(report.stats)
 }
 
 fn encode_to(

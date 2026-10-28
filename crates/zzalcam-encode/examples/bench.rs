@@ -1,8 +1,9 @@
 //! Reference benchmark from docs/design.md: 1080p, 15 fps, 10 s of synthetic UI interaction
 //! (typing, scrolling a list, a moving cursor, idle stretches).
 //!
-//! `cargo run --release -p zzalcam-encode --example bench [-- <outdir>]`
-//! Prints one line per encoder; the numbers are deterministic apart from timing.
+//! `cargo run --release -p zzalcam-encode --example bench [-- [--json <file>] [<outdir>]]`
+//! Prints one line per encoder; sizes are deterministic, timings are not. `--json` writes the
+//! results for `bench/compare.py`; `<outdir>` keeps the encoded files.
 
 use std::io::Write;
 use std::time::Instant;
@@ -142,7 +143,16 @@ impl FrameSource for SyntheticUi {
 }
 
 fn main() {
-    let outdir = std::env::args().nth(1).map(std::path::PathBuf::from);
+    let mut args = std::env::args().skip(1);
+    let (mut json, mut outdir) = (None, None);
+    while let Some(a) = args.next() {
+        if a == "--json" {
+            json = args.next().map(std::path::PathBuf::from);
+        } else {
+            outdir = Some(std::path::PathBuf::from(a));
+        }
+    }
+    let results = std::cell::RefCell::new(Vec::<(String, f64, u64)>::new());
     let src = SyntheticUi;
     let t = Instant::now();
     let _ = src.frames().count();
@@ -164,6 +174,9 @@ fn main() {
         };
         let t = Instant::now();
         let s = f(&mut out);
+        results
+            .borrow_mut()
+            .push((name.to_string(), t.elapsed().as_secs_f64(), out.bytes));
         println!(
             "{name:22} {:7.2}s {:9.1} KB  {} frames",
             t.elapsed().as_secs_f64(),
@@ -187,6 +200,29 @@ fn main() {
         counting(&format!("webp_{label}.webp"), &|o| {
             webp::encode(&src, &preset.webp(), o, &|_, _| {}).unwrap()
         });
+    }
+    if let Some(path) = json {
+        let entries: Vec<String> = results
+            .borrow()
+            .iter()
+            .map(|(n, secs, bytes)| {
+                format!("  \"{n}\": {{ \"secs\": {secs:.3}, \"bytes\": {bytes} }}")
+            })
+            .collect();
+        std::fs::write(
+            &path,
+            format!(
+                "{{
+{}
+}}
+",
+                entries.join(
+                    ",
+"
+                )
+            ),
+        )
+        .unwrap();
     }
 }
 

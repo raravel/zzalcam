@@ -65,6 +65,16 @@ License: GPL-3.0.
 - **Disk space**: warn before recording below 2 GB free; auto-stop below 500 MB with a toast.
 - **WebP**: parallel encoding (own sub-frame diff, `WebPEncode` per frame in parallel, `WebPMux` assembly) if time allows, otherwise M4.
 
+### M4 decisions
+
+- **Repository**: public `github.com/raravel/zzalcam`, default branch `main`; feature branches merge through PRs.
+- **CI** (`windows-latest`, every push / PR): `cargo fmt --check`, `clippy -D warnings`, tests, `pnpm check`, and the synthetic benchmark compared with `bench/baseline.json`: output size growing > 2 % fails; encode times are reported (warnings > 30 % are enabled once the baseline times come from a CI runner).
+- **Release**: pushing a `v*` tag builds the NSIS installer, the portable zip and the CLI into a **draft** GitHub release; updater artifacts are signed with a minisign key kept in repository secrets.
+- **Updates**: check at startup and every 24 h against `latest.json` on GitHub Releases; a toast offers "Update" (download, install, restart); deferred while recording or encoding; can be turned off; disabled in portable mode.
+- **Portable mode**: a `zzalcam.portable` file next to the executable keeps settings, sessions and logs in `data\` beside it.
+- **Docs**: English `README.md` + Korean `README.ko.md` (features, hotkeys, install, CLI, gifski comparison, build); `CHANGELOG.md` from 0.1.0; `THIRD_PARTY_LICENSES.html` generated with `cargo-about`, attached to every release and included in the portable zip.
+- **WebP**: own pipeline — per-frame change rectangles, sub-frames encoded with `WebPEncode` in parallel, assembled with `WebPMux`.
+
 ## 4. Session storage
 
 - Raw frames go to a session file under `%LOCALAPPDATA%\zzalcam\sessions\`.
@@ -106,11 +116,11 @@ Trim start/end, delete frames, crop, preview.
 ## 8. CLI
 
 ```
-zzalcam record --monitor 1 --duration 5s -o out.gif
-zzalcam record --window "Notepad" --fps 30 -o out.webp
-zzalcam record --region 100,100,800,600 --max-size 8MB -o out.gif
-zzalcam encode <session> --preset smallest -o out.gif
-zzalcam list monitors|windows
+zzalcam-cli record --monitor 1 --duration 5s -o out.gif
+zzalcam-cli record --window "Notepad" --fps 30 -o out.webp
+zzalcam-cli record --region 100,100,800,600 --max-size 8MB -o out.gif
+zzalcam-cli encode <session> --preset smallest -o out.gif
+zzalcam-cli list monitors|windows
 ```
 
 Interactive region selection is GUI-only.

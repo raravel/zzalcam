@@ -1,0 +1,70 @@
+name: Release
+
+# Push a tag like v0.1.0 to build a draft release; publish it by hand after checking it.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - name: UI dependencies
+        working-directory: app
+        run: pnpm install --frozen-lockfile
+
+      - name: Third-party licenses
+        run: cargo about generate about.hbs -o THIRD_PARTY_LICENSES.html
+
+      # Installer + updater artifacts (signed with the minisign key from secrets) + latest.json.
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          projectPath: app
+          tagName: ${{ github.ref_name }}
+          releaseName: zzalcam ${{ github.ref_name }}
+          releaseBody: See CHANGELOG.md for what changed.
+          releaseDraft: true
+          includeUpdaterJson: true
+          # Updater artifacts need the signing key, so they are only enabled here, not for local builds.
+          args: --config src-tauri/tauri.updater.conf.json
+
+      - name: Portable zip and CLI
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cargo build --release -p zzalcam-cli
+          $dir = "zzalcam-portable"
+          New-Item -ItemType Directory $dir | Out-Null
+          Copy-Item target/release/zzalcam-app.exe "$dir/zzalcam.exe"
+          Copy-Item target/release/zzalcam-cli.exe "$dir/zzalcam-cli.exe"
+          Copy-Item LICENSE, THIRD_PARTY_LICENSES.html, README.md $dir
+          # Marks this copy as portable: settings and recordings stay in .\data
+          New-Item -ItemType File "$dir/zzalcam.portable" | Out-Null
+          $zip = "zzalcam-${{ github.ref_name }}-portable-x64.zip"
+          Compress-Archive -Path "$dir/*" -DestinationPath $zip
+          Copy-Item target/release/zzalcam-cli.exe "zzalcam-cli-${{ github.ref_name }}-x64.exe"
+          gh release upload "${{ github.ref_name }}" $zip "zzalcam-cli-${{ github.ref_name }}-x64.exe" THIRD_PARTY_LICENSES.html --clobber

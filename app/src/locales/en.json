@@ -97,5 +97,11 @@
   "settings.scale": "Default size",
   "settings.max_size": "Default max size (MB, 0 = no limit)",
   "settings.autostart": "Start with Windows",
-  "toast.save": "Save"
+  "toast.save": "Save",
+  "toast.update": "zzalcam {version} is available",
+  "toast.update_now": "Update",
+  "toast.installing": "Installing update…",
+  "settings.auto_update": "Check for updates",
+  "settings.portable": "Not available in portable mode",
+  "toast.update_busy": "Update once the recording or save has finished"
 }

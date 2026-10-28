@@ -97,5 +97,11 @@
   "settings.scale": "기본 크기",
   "settings.max_size": "기본 최대 용량 (MB, 0 = 제한 없음)",
   "settings.autostart": "Windows 시작 시 실행",
-  "toast.save": "저장"
+  "toast.save": "저장",
+  "toast.update": "zzalcam {version} 업데이트가 있습니다",
+  "toast.update_now": "업데이트",
+  "toast.installing": "업데이트 설치 중…",
+  "settings.auto_update": "자동 업데이트 확인",
+  "settings.portable": "포터블 모드에서는 사용할 수 없습니다",
+  "toast.update_busy": "녹화나 저장이 끝난 뒤에 업데이트할 수 있습니다"
 }

@@ -21,7 +21,8 @@
       toast = e.payload;
       clearTimeout(timer);
       // "Encoding…" stays until the result replaces it; recovery waits for a decision.
-      if (toast.kind !== "encoding" && toast.kind !== "recovery") timer = setTimeout(hide, AUTO_HIDE_MS);
+      // Prompts that need a decision stay until answered.
+      if (!["encoding", "recovery", "update"].includes(toast.kind)) timer = setTimeout(hide, AUTO_HIDE_MS);
     });
     // Toasts emitted before this listener existed (e.g. recovery at startup) are re-sent now.
     un.then(() => invoke("toast_ready"));
@@ -68,6 +69,8 @@
       <button onclick={(e) => { e.stopPropagation(); reveal(); }}>{t("toast.open_folder")}</button>
     {:else if toast.kind === "cancelled"}
       <button onclick={undo}>{t("toast.undo")}</button>
+    {:else if toast.kind === "update"}
+      <button onclick={(e) => { e.stopPropagation(); invoke("install_update"); }}>{t("toast.update_now")}</button>
     {:else if toast.kind === "recovery"}
       <button onclick={(e) => recover(e, "open")}>{t("toast.open_editor")}</button>
       <button onclick={(e) => recover(e, "save")}>{t("toast.save")}</button>
@@ -110,7 +113,8 @@
   }
   .cancelled .icon,
   .warning .icon,
-  .recovery .icon {
+  .recovery .icon,
+  .update .icon {
     background: var(--warning);
   }
   svg {

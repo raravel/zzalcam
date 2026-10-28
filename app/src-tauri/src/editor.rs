@@ -84,7 +84,7 @@ pub fn open(app: &AppHandle, session: PathBuf) -> anyhow::Result<()> {
     editors.0.lock().unwrap().insert(id.clone(), editor);
 
     let i = I18n::new(&app.state::<AppState>().settings.lock().unwrap().language);
-    let built = WebviewWindowBuilder::new(
+    let mut builder = WebviewWindowBuilder::new(
         app,
         label,
         WebviewUrl::App(format!("index.html?editor={id}").into()),
@@ -92,8 +92,11 @@ pub fn open(app: &AppHandle, session: PathBuf) -> anyhow::Result<()> {
     .title(i.t("editor.title"))
     .inner_size(1120.0, 760.0)
     .min_inner_size(760.0, 520.0)
-    .center()
-    .build();
+    .center();
+    if let Some(dir) = crate::paths::webview_dir() {
+        builder = builder.data_directory(dir);
+    }
+    let built = builder.build();
     if let Err(e) = built {
         editors.0.lock().unwrap().remove(&id);
         return Err(e.into());
@@ -306,7 +309,9 @@ pub async fn editor_save(
 ) -> Result<Saved, String> {
     let editor = state.editors.get(&id)?;
     let s = state.settings.lock().unwrap().clone();
+    let busy = crate::ExportGuard::new(&app);
     tauri::async_runtime::spawn_blocking(move || {
+        let _busy = busy;
         let opts = export.options();
         let ext = opts.format.extension();
         // The file always gets the extension of the format actually written.

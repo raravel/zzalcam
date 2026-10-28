@@ -5,6 +5,7 @@ pub mod gif;
 pub mod pacing;
 pub mod transform;
 pub mod webp;
+pub mod webp_mux;
 
 use std::path::Path;
 
