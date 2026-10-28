@@ -22,8 +22,10 @@ fn row_changed(prev: &[u8], cur: &[u8], tolerance: u8) -> bool {
     if tolerance == 0 {
         return prev != cur;
     }
-    prev.chunks_exact(4)
-        .zip(cur.chunks_exact(4))
+    prev.as_chunks::<4>()
+        .0
+        .iter()
+        .zip(cur.as_chunks::<4>().0.iter())
         .any(|(a, b)| a.iter().zip(b).any(|(x, y)| x.abs_diff(*y) > tolerance))
 }
 

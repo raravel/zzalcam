@@ -17,7 +17,7 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(0);
     let f = rd.frame(idx).unwrap();
-    let px = f.frame.rgba.chunks_exact(4);
+    let px = f.frame.rgba.as_chunks::<4>().0.iter();
     let n = px.len() as f64;
     let mut sum = [0f64; 4];
     for p in px {
@@ -31,7 +31,9 @@ fn main() {
         ppm.extend(
             f.frame
                 .rgba
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .flat_map(|p| [p[0], p[1], p[2]]),
         );
         std::fs::write(out, ppm).unwrap();

@@ -93,7 +93,7 @@ fn load_shape(cursor: HCURSOR) -> Option<Shape> {
 
     let (w, h, px) = match color {
         Some((w, h, c)) => {
-            let has_alpha = c.chunks_exact(4).any(|p| p[3] != 0);
+            let has_alpha = c.as_chunks::<4>().0.iter().any(|p| p[3] != 0);
             let px = (0..(w * h) as usize)
                 .map(|i| {
                     let (b, g, r, a) = (c[i * 4], c[i * 4 + 1], c[i * 4 + 2], c[i * 4 + 3]);
