@@ -2,8 +2,6 @@
 //!
 //! Every phase runs on its own thread; hotkeys, the tray and the control bar only flip flags.
 
-use std::fs::File;
-use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -15,13 +13,16 @@ use zzalcam_capture::{CaptureOptions, RecordControl, ScreenRect, Target};
 use zzalcam_core::{FrameSource, SessionReader, SessionWriter};
 use zzalcam_overlay::{Mode, RecordingFrame, SelectHandle};
 
+use crate::disk;
 use crate::i18n::I18n;
 use crate::settings::Settings;
 use crate::ui::{self, Toast};
-use crate::{AppState, clipboard};
+use crate::{AppState, editor, output};
 
 const COUNTDOWN_FROM: u32 = 3;
 const STATS_INTERVAL: Duration = Duration::from_millis(250);
+/// Check free disk space every this many stats ticks (2 s).
+const DISK_CHECK_TICKS: u32 = 8;
 /// Rough output size per byte of LZ4 session data, measured on UI recordings (docs/design.md §9).
 const GIF_BYTES_PER_SESSION_BYTE: f64 = 0.045;
 const WEBP_BYTES_PER_SESSION_BYTE: f64 = 0.03;
@@ -44,6 +45,8 @@ struct LastTarget {
 struct Active {
     ctl: RecordControl,
     cancelled: AtomicBool,
+    /// Recording stopped because the session drive is nearly full.
+    low_disk: AtomicBool,
     frame: Mutex<Option<RecordingFrame>>,
 }
 
@@ -275,7 +278,26 @@ impl Controller {
             *phase = Phase::Encoding;
         }
         let this = self.clone();
-        std::thread::spawn(move || this.encode_and_save(&session));
+        std::thread::spawn(move || this.deliver(session, None));
+    }
+
+    /// Hand a finished session to the editor or save it right away, per settings.
+    /// Expects the phase to be leaving Recording (or Encoding for undo).
+    /// `note` explains an early stop (low disk); it goes on the saved toast, or on its own toast
+    /// when the editor opens instead.
+    fn deliver(&self, session: PathBuf, note: Option<String>) {
+        if self.settings().after_record == "editor" {
+            self.set_idle();
+            if let Some(n) = note {
+                ui::toast(&self.app, Toast::warning(n));
+            }
+            if let Err(e) = editor::open(&self.app, session.clone()) {
+                self.fail_keeping(&e.to_string(), &session);
+            }
+        } else {
+            *self.phase.lock().unwrap() = Phase::Encoding;
+            self.encode_and_save(&session, note.as_deref());
+        }
     }
 
     /// Start recording `t`; `from_selecting` says which phase we expect to leave.
@@ -283,6 +305,7 @@ impl Controller {
         let active = Arc::new(Active {
             ctl: RecordControl::default(),
             cancelled: AtomicBool::new(false),
+            low_disk: AtomicBool::new(false),
             frame: Mutex::new(None),
         });
         {
@@ -318,8 +341,11 @@ impl Controller {
                 ui::toast(&self.app, Toast::cancelled(&i, session));
             }
             Ok(Some(session)) => {
-                *self.phase.lock().unwrap() = Phase::Encoding;
-                self.encode_and_save(&session);
+                let note = active
+                    .low_disk
+                    .load(Ordering::Relaxed)
+                    .then(|| self.i18n().t("toast.low_disk"));
+                self.deliver(session, note);
             }
             Err(e) => {
                 self.set_idle();
@@ -372,7 +398,12 @@ impl Controller {
             s.format
         );
 
-        let session = session_dir(&self.app)?.join(format!(
+        let dir = session_dir(&self.app)?;
+        if disk::free_bytes(&dir).is_some_and(|f| f < disk::WARN_BELOW) {
+            let i = self.i18n();
+            ui::toast(&self.app, Toast::warning(i.t("toast.disk_warning")));
+        }
+        let session = dir.join(format!(
             "{}.zzcs",
             SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis()
         ));
@@ -390,7 +421,15 @@ impl Controller {
         let done = AtomicBool::new(false);
         let recorded = std::thread::scope(|scope| {
             scope.spawn(|| {
+                let mut ticks = 0u32;
                 while !done.load(Ordering::Relaxed) {
+                    ticks += 1;
+                    if ticks.is_multiple_of(DISK_CHECK_TICKS)
+                        && disk::free_bytes(&dir).is_some_and(|f| f < disk::STOP_BELOW)
+                    {
+                        active.low_disk.store(true, Ordering::Relaxed);
+                        active.ctl.stop.store(true, Ordering::Relaxed);
+                    }
                     let c = &active.ctl;
                     let stats = Stats {
                         elapsed_ms: c.elapsed_ms.load(Ordering::Relaxed),
@@ -418,41 +457,23 @@ impl Controller {
         Ok(Some(session))
     }
 
-    fn encode_and_save(&self, session: &Path) {
+    fn encode_and_save(&self, session: &Path, note: Option<&str>) {
         let i = self.i18n();
         ui::toast(&self.app, Toast::encoding(&i));
         let s = self.settings();
-        let result = (|| -> anyhow::Result<PathBuf> {
-            let src = SessionReader::open(session)?;
-            anyhow::ensure!(src.frame_count() > 0, "nothing was recorded");
-            std::fs::create_dir_all(&s.output_dir)?;
-            let out = unique_output_path(&s.output_dir, s.format().extension());
-            let mut part = out.clone().into_os_string();
-            part.push(".part");
-            let part = PathBuf::from(part);
-            let file = BufWriter::new(File::create(&part)?);
-            let encoded =
-                zzalcam_encode::encode_with_preset(&src, s.format(), s.preset(), file, &|_, _| {});
-            if let Err(e) = encoded {
-                std::fs::remove_file(&part).ok();
-                return Err(e.into());
-            }
-            std::fs::rename(&part, &out)?;
-            Ok(out)
-        })();
+        let result = output::save_session(&self.app, &s, &i, session, note);
         self.set_idle();
-        match result {
-            Ok(out) => {
-                std::fs::remove_file(session).ok();
-                let copied = clipboard::copy_file(&out).is_ok();
-                ui::toast(&self.app, Toast::saved(&i, &out, copied));
-            }
-            // Keep the recording so nothing is lost; the toast says where it is.
-            Err(e) => ui::toast(
-                &self.app,
-                Toast::failed(&i, &e.to_string()).with_detail(session),
-            ),
+        if let Err(e) = result {
+            self.fail_keeping(&e.to_string(), session);
         }
+    }
+
+    /// Report a failure but keep the recording; the toast says where it is.
+    fn fail_keeping(&self, error: &str, session: &Path) {
+        ui::toast(
+            &self.app,
+            Toast::failed(&self.i18n(), error).with_detail(session),
+        );
     }
 
     fn fail(&self, error: &str) {
@@ -464,20 +485,4 @@ pub fn session_dir(app: &AppHandle) -> anyhow::Result<PathBuf> {
     let dir = app.path().app_local_data_dir()?.join("sessions");
     std::fs::create_dir_all(&dir)?;
     Ok(dir)
-}
-
-/// `zzalcam_yyyyMMdd_HHmmss.ext`, with a numeric suffix if that already exists.
-fn unique_output_path(dir: &Path, ext: &str) -> PathBuf {
-    let t = unsafe { windows::Win32::System::SystemInformation::GetLocalTime() };
-    let stem = format!(
-        "zzalcam_{:04}{:02}{:02}_{:02}{:02}{:02}",
-        t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond
-    );
-    let mut path = dir.join(format!("{stem}.{ext}"));
-    let mut n = 2;
-    while path.exists() {
-        path = dir.join(format!("{stem}_{n}.{ext}"));
-        n += 1;
-    }
-    path
 }

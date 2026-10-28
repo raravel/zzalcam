@@ -2,6 +2,19 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Permissions for all zzalcam windows",
-  "windows": ["main", "controlbar", "toast"],
-  "permissions": ["core:default", "core:window:allow-hide", "core:window:allow-show", "dialog:allow-open"]
+  "windows": [
+    "main",
+    "controlbar",
+    "toast",
+    "editor-*"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-destroy",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    "dialog:allow-ask"
+  ]
 }

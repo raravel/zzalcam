@@ -1,7 +1,9 @@
 //! GIF and animated WebP encoders tuned for screen recordings.
 
+pub mod export;
 pub mod gif;
 pub mod pacing;
+pub mod transform;
 pub mod webp;
 
 use std::path::Path;

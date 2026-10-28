@@ -51,6 +51,20 @@ License: GPL-3.0.
 - **Settings window**: hotkeys, fps, cursor, format, preset, output folder. All strings are i18n keys from the start (ko, en).
 - **Single instance**; closing the window hides to tray, quit only from the tray menu.
 
+### M3 decisions
+
+- **Editor**: one Tauri window per session, opened after recording (setting: open editor / save immediately). Frames reach the webview through a custom protocol (`zzalcam://…`): small thumbnails for the filmstrip, full-size lossy WebP (q85) for the preview, decoded from the session on demand.
+- **Layout**: preview with crop handles in the centre; filmstrip below (thumbnails, trim handles, multi-select, playhead); side panel with format, preset, scale, max size, crop numbers and a live size estimate (sample encode, 0.5 s debounce); Save / Save as at the bottom.
+- **Edits (M3)**: trim, delete frames, crop, real-time playback with frame stepping, undo/redo. Per-frame delays, speed and annotations come later.
+- **Non-destructive**: edits are a spec (trim range, deleted frames, crop rect) applied at encode time through a `FrameSource` adapter; the session file is never rewritten.
+- **Max size target**: sample-encode, then step down quality/colours → tolerance → fps (frame decimation) → scale (`fast_image_resize`), re-encoding once more if the final file still exceeds the target; the toast reports what was changed.
+- **Scale** is an export option (editor + default in settings), not a capture option; recordings are always full resolution.
+- **Save flow**: Save → default folder + filename pattern, clipboard copy, toast. Save as → file dialog. Closing unsaved asks first; discarding deletes the session unless "keep sessions" is on.
+- **Crash recovery**: sessions left at startup are unsaved recordings; a prompt offers open in editor / save / delete (sessions older than 7 days are still removed).
+- **Settings added**: after-record action, keep sessions, filename pattern (tokens), default export scale and max size, start with Windows.
+- **Disk space**: warn before recording below 2 GB free; auto-stop below 500 MB with a toast.
+- **WebP**: parallel encoding (own sub-frame diff, `WebPEncode` per frame in parallel, `WebPMux` assembly) if time allows, otherwise M4.
+
 ## 4. Session storage
 
 - Raw frames go to a session file under `%LOCALAPPDATA%\zzalcam\sessions\`.

@@ -39,7 +39,7 @@ const PALETTE_SAMPLE_BUDGET_PX: usize = 8 * 1024 * 1024;
 /// Max pixels sampled from a single frame.
 const PALETTE_SAMPLE_PER_FRAME_PX: usize = 256 * 1024;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GifOptions {
     /// Target quality 0–100 (imagequant). The minimum accepted is 30 below this.
     pub quality: u8,

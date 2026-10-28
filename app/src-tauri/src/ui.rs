@@ -79,7 +79,8 @@ pub fn hide_bar(app: &AppHandle) {
 
 #[derive(Serialize, Clone)]
 pub struct Toast {
-    /// `encoding`, `saved`, `cancelled` or `failed`; decides the buttons and auto-hide.
+    /// `encoding`, `saved`, `cancelled`, `failed`, `warning` or `recovery`; decides the buttons
+    /// and auto-hide.
     pub kind: &'static str,
     pub title: String,
     pub detail: String,
@@ -128,6 +129,26 @@ impl Toast {
     pub fn with_detail(mut self, path: &Path) -> Self {
         self.detail = path.display().to_string();
         self
+    }
+
+    /// Something the user should know that is not a failure.
+    pub fn warning(title: String) -> Self {
+        Self {
+            kind: "warning",
+            title,
+            detail: String::new(),
+            path: None,
+        }
+    }
+
+    /// Unsaved recordings found at startup.
+    pub fn recovery(i: &I18n, count: usize) -> Self {
+        Self {
+            kind: "recovery",
+            title: i.tf("toast.recovery", &[("n", &count.to_string())]),
+            detail: String::new(),
+            path: None,
+        }
     }
 
     pub fn failed(i: &I18n, error: &str) -> Self {

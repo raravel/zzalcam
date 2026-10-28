@@ -67,6 +67,13 @@
         </select>
       </label>
       <label class="row">
+        <span>{t("settings.after_record")}</span>
+        <select bind:value={settings.after_record}>
+          <option value="editor">{t("settings.after_record.editor")}</option>
+          <option value="save">{t("settings.after_record.save")}</option>
+        </select>
+      </label>
+      <label class="row">
         <span>{t("settings.cursor")}</span>
         <input type="checkbox" bind:checked={settings.cursor} />
       </label>
@@ -93,6 +100,25 @@
             <option value={p}>{t(`settings.preset.${p}`)}</option>
           {/each}
         </select>
+      </label>
+      <label class="row">
+        <span>{t("settings.scale")}</span>
+        <select bind:value={settings.export_scale}>
+          {#each [1, 0.75, 0.5, 0.33] as s}<option value={s}>{Math.round(s * 100)}%</option>{/each}
+        </select>
+      </label>
+      <label class="row">
+        <span>{t("settings.max_size")}</span>
+        <input class="num" type="number" min="0" step="0.5" value={settings.max_size_mb ?? 0}
+          onchange={(e) => { const v = Number((e.target as HTMLInputElement).value); settings!.max_size_mb = v > 0 ? v : null; }} />
+      </label>
+      <label class="row">
+        <span>{t("settings.filename")}<em class="hint">{t("settings.filename_hint")}</em></span>
+        <input class="text" bind:value={settings.filename_pattern} />
+      </label>
+      <label class="row">
+        <span>{t("settings.keep_sessions")}</span>
+        <input type="checkbox" bind:checked={settings.keep_sessions} />
       </label>
       <div class="row">
         <span>{t("settings.folder")}</span>
@@ -125,6 +151,10 @@
           <option value="ko">한국어</option>
           <option value="en">English</option>
         </select>
+      </label>
+      <label class="row">
+        <span>{t("settings.autostart")}</span>
+        <input type="checkbox" bind:checked={settings.autostart} />
       </label>
     </section>
   </main>
@@ -240,6 +270,28 @@
   }
   .saved.show {
     opacity: 1;
+  }
+  input.num {
+    width: 90px;
+  }
+  input.text {
+    width: 230px;
+  }
+  input.num,
+  input.text {
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    padding: 0 10px;
+    font: inherit;
+    color: inherit;
+  }
+  .hint {
+    display: block;
+    font-style: normal;
+    font-size: 11px;
+    color: var(--muted);
   }
   .conflict {
     display: block;

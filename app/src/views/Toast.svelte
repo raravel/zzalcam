@@ -20,9 +20,11 @@
     const un = listen<Toast>("toast", (e) => {
       toast = e.payload;
       clearTimeout(timer);
-      // "Encoding…" stays until the result replaces it.
-      if (toast.kind !== "encoding") timer = setTimeout(hide, AUTO_HIDE_MS);
+      // "Encoding…" stays until the result replaces it; recovery waits for a decision.
+      if (toast.kind !== "encoding" && toast.kind !== "recovery") timer = setTimeout(hide, AUTO_HIDE_MS);
     });
+    // Toasts emitted before this listener existed (e.g. recovery at startup) are re-sent now.
+    un.then(() => invoke("toast_ready"));
     return () => un.then((f) => f());
   });
 
@@ -31,6 +33,12 @@
       invoke("reveal", { path: toast.path });
       hide();
     }
+  }
+
+  function recover(e: MouseEvent, action: "open" | "save" | "delete") {
+    e.stopPropagation();
+    invoke("recover", { action });
+    hide();
   }
 
   function undo(e: MouseEvent) {
@@ -60,6 +68,10 @@
       <button onclick={(e) => { e.stopPropagation(); reveal(); }}>{t("toast.open_folder")}</button>
     {:else if toast.kind === "cancelled"}
       <button onclick={undo}>{t("toast.undo")}</button>
+    {:else if toast.kind === "recovery"}
+      <button onclick={(e) => recover(e, "open")}>{t("toast.open_editor")}</button>
+      <button onclick={(e) => recover(e, "save")}>{t("toast.save")}</button>
+      <button onclick={(e) => recover(e, "delete")}>{t("toast.delete")}</button>
     {/if}
     {#if toast.kind !== "encoding"}
       <button class="close" aria-label="close" onclick={(e) => { e.stopPropagation(); hide(); }}>×</button>
@@ -96,7 +108,9 @@
   .failed .icon {
     background: var(--danger);
   }
-  .cancelled .icon {
+  .cancelled .icon,
+  .warning .icon,
+  .recovery .icon {
     background: var(--warning);
   }
   svg {

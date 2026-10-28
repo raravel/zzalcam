@@ -1,10 +1,12 @@
 //! Shared types for zzalcam: frames, rectangles and the on-disk session format.
 
 pub mod diff;
+pub mod edit;
 pub mod session;
 
 pub use diff::changed_bbox;
-pub use session::{SessionReader, SessionWriter};
+pub use edit::{EditSpec, EditedSource};
+pub use session::{SessionCursor, SessionReader, SessionWriter};
 
 /// Axis-aligned pixel rectangle.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -77,6 +79,14 @@ pub trait FrameSource: Sync {
     fn height(&self) -> u32;
     fn frame_count(&self) -> usize;
     fn frames(&self) -> Box<dyn Iterator<Item = Result<TimedFrame, Error>> + '_>;
+
+    /// Frames from index `start` on. Sources that can seek cheaply override this.
+    fn frames_from(
+        &self,
+        start: usize,
+    ) -> Box<dyn Iterator<Item = Result<TimedFrame, Error>> + '_> {
+        Box::new(self.frames().skip(start))
+    }
 }
 
 /// In-memory source, mainly for tests and short clips.

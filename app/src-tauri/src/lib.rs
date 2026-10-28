@@ -2,8 +2,11 @@
 
 mod cleanup;
 mod clipboard;
+mod disk;
+mod editor;
 mod hotkeys;
 mod i18n;
+mod output;
 mod recorder;
 mod settings;
 mod tray;
@@ -20,6 +23,9 @@ use crate::i18n::I18n;
 use crate::recorder::{Controller, Start};
 use crate::settings::Settings;
 
+/// Threads serving editor frame requests.
+const PROTOCOL_WORKERS: usize = 3;
+
 pub struct AppState {
     pub settings: Mutex<Settings>,
     pub controller: Arc<Controller>,
@@ -28,6 +34,12 @@ pub struct AppState {
     pub conflicts: Mutex<Vec<&'static str>>,
     /// The settings window is capturing a new key combination; hotkeys stay unregistered.
     pub hotkeys_suspended: AtomicBool,
+    pub editors: editor::Editors,
+    /// Unsaved sessions found at startup, frozen so the recovery prompt never touches files
+    /// created later (a recording in progress, an open editor).
+    pub recovery: Mutex<Vec<PathBuf>>,
+    /// The toast page is listening; before that, emitted toasts would be lost.
+    pub toast_ready: AtomicBool,
 }
 
 #[tauri::command]
@@ -55,6 +67,16 @@ fn save_settings(
 ) -> Result<(Settings, Vec<&'static str>), String> {
     let saved = settings::save(&app, settings).map_err(|e| e.to_string())?;
     let language_changed = state.settings.lock().unwrap().language != saved.language;
+    if state.settings.lock().unwrap().autostart != saved.autostart {
+        use tauri_plugin_autostart::ManagerExt;
+        let launcher = app.autolaunch();
+        let toggled = if saved.autostart {
+            launcher.enable()
+        } else {
+            launcher.disable()
+        };
+        toggled.map_err(|e| e.to_string())?;
+    }
     *state.settings.lock().unwrap() = saved.clone();
     // While a combination is being captured, registering would swallow the very keys being typed;
     // `suspend_hotkeys(false)` applies the saved set afterwards.
@@ -116,6 +138,80 @@ fn undo_cancel(state: State<AppState>) {
     state.controller.undo_cancel();
 }
 
+/// Show the recovery prompt if startup found unsaved sessions.
+fn offer_recovery(app: &AppHandle) {
+    let count = app.state::<AppState>().recovery.lock().unwrap().len();
+    if count > 0 {
+        let i = I18n::new(&app.state::<AppState>().settings.lock().unwrap().language);
+        ui::toast(app, ui::Toast::recovery(&i, count));
+    }
+}
+
+/// The toast page has subscribed; anything queued at startup can be shown now.
+#[tauri::command]
+fn toast_ready(app: AppHandle, state: State<AppState>) {
+    state.toast_ready.store(true, Ordering::Relaxed);
+    offer_recovery(&app);
+}
+
+/// Act on the sessions found at startup (and only those): open them in editors, save them with
+/// the current settings, or delete them. Unreadable or empty sessions are removed either way.
+/// Async on purpose: creating windows from a synchronous command deadlocks on Windows.
+#[tauri::command]
+async fn recover(app: AppHandle, action: String) -> Result<(), String> {
+    if !matches!(action.as_str(), "open" | "save" | "delete") {
+        return Err(format!("unknown recovery action {action}"));
+    }
+    let sessions = std::mem::take(&mut *app.state::<AppState>().recovery.lock().unwrap());
+    let s = app.state::<AppState>().settings.lock().unwrap().clone();
+    let i = I18n::new(&s.language);
+    let mut failures: Vec<(String, PathBuf)> = Vec::new();
+    for session in sessions {
+        let usable = zzalcam_core::SessionReader::open(&session).is_ok_and(|r| {
+            use zzalcam_core::FrameSource;
+            r.frame_count() > 0
+        });
+        if !usable || action == "delete" {
+            std::fs::remove_file(&session).ok();
+            continue;
+        }
+        let result = if action == "open" {
+            editor::open(&app, session.clone())
+        } else {
+            // Encoding takes a while: show progress and keep it off the async runtime.
+            ui::toast(&app, ui::Toast::encoding(&i));
+            let (app, s, i2, path) = (
+                app.clone(),
+                s.clone(),
+                I18n::new(&s.language),
+                session.clone(),
+            );
+            tauri::async_runtime::spawn_blocking(move || {
+                output::save_session(&app, &s, &i2, &path, None).map(|_| ())
+            })
+            .await
+            .map_err(anyhow::Error::from)
+            .and_then(|r| r)
+        };
+        if let Err(e) = result {
+            failures.push((e.to_string(), session));
+        }
+    }
+    // The toast window is hidden by now, so report failures with a toast of their own.
+    if let Some((error, session)) = failures.first() {
+        ui::toast(&app, ui::Toast::failed(&i, error).with_detail(session));
+    }
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(failures
+            .into_iter()
+            .map(|(e, _)| e)
+            .collect::<Vec<_>>()
+            .join("\n"))
+    }
+}
+
 /// Open Explorer with `path` selected.
 #[tauri::command]
 fn reveal(path: PathBuf) -> Result<(), String> {
@@ -140,6 +236,20 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            None,
+        ))
+        .register_asynchronous_uri_scheme_protocol("zzalcam", {
+            // Decoding and encoding a frame takes milliseconds; keep it off the main thread.
+            let workers = Mutex::new(editor::spawn_workers(PROTOCOL_WORKERS));
+            move |ctx, req, responder| {
+                let app = ctx.app_handle().clone();
+                let job: editor::Job =
+                    Box::new(move || responder.respond(editor::protocol(&app, &req)));
+                let _ = workers.lock().unwrap().send(job);
+            }
+        })
         .setup(|app| {
             let handle = app.handle().clone();
             let s = settings::load(&handle);
@@ -151,6 +261,9 @@ pub fn run() {
                 hotkeys: Mutex::new(HashMap::new()),
                 conflicts: Mutex::new(Vec::new()),
                 hotkeys_suspended: AtomicBool::new(false),
+                editors: editor::Editors::default(),
+                recovery: Mutex::new(Vec::new()),
+                toast_ready: AtomicBool::new(false),
             });
             {
                 let output = handle
@@ -161,7 +274,20 @@ pub fn run() {
                     .output_dir
                     .clone();
                 let sessions = recorder::session_dir(&handle).ok();
-                std::thread::spawn(move || cleanup::stale_files(sessions.as_deref(), &output));
+                let app = handle.clone();
+                std::thread::spawn(move || {
+                    cleanup::stale_files(sessions.as_deref(), &output);
+                    // Whatever is left is a recording that was never saved (crash, power loss).
+                    let found = sessions
+                        .as_deref()
+                        .map(cleanup::sessions)
+                        .unwrap_or_default();
+                    let state = app.state::<AppState>();
+                    *state.recovery.lock().unwrap() = found;
+                    if state.toast_ready.load(Ordering::Relaxed) {
+                        offer_recovery(&app);
+                    }
+                });
             }
             // Windows are created only now: their pages call commands that need AppState.
             for w in &app.config().app.windows {
@@ -178,8 +304,10 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, ev| {
-            // Closing the settings window keeps the app in the tray.
-            if let WindowEvent::CloseRequested { api, .. } = ev {
+            // App windows hide instead of closing (the bar and toast are reused, the settings
+            // window lives in the tray); editors close normally.
+            let app_window = matches!(window.label(), "main" | "controlbar" | "toast");
+            if let (WindowEvent::CloseRequested { api, .. }, true) = (ev, app_window) {
                 api.prevent_close();
                 let _ = window.hide();
                 // A hotkey capture interrupted by closing the window must not leave hotkeys off.
@@ -195,7 +323,13 @@ pub fn run() {
             start,
             control,
             undo_cancel,
-            reveal
+            reveal,
+            recover,
+            toast_ready,
+            editor::editor_info,
+            editor::editor_estimate,
+            editor::editor_save,
+            editor::editor_close
         ])
         .build(tauri::generate_context!())
         .expect("error while building zzalcam")

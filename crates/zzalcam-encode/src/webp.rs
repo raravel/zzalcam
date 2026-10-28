@@ -20,7 +20,7 @@ pub enum WebpMode {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct WebpOptions {
     pub mode: WebpMode,
     /// libwebp effort 0 (fast) – 6 (slow, small).
@@ -102,6 +102,35 @@ fn config(opts: &WebpOptions) -> Result<sys::WebPConfig, EncodeError> {
         return Err(EncodeError::WebP("invalid config".into()));
     }
     Ok(cfg)
+}
+
+/// Encode one RGBA8 image as a lossy still WebP (for previews).
+pub fn encode_still(
+    rgba: &[u8],
+    width: u32,
+    height: u32,
+    quality: f32,
+) -> Result<Vec<u8>, EncodeError> {
+    if rgba.len() != width as usize * height as usize * 4 {
+        return Err(EncodeError::Invalid("buffer does not match image size"));
+    }
+    let mut out = ptr::null_mut();
+    let n = unsafe {
+        sys::WebPEncodeRGBA(
+            rgba.as_ptr(),
+            width as i32,
+            height as i32,
+            width as i32 * 4,
+            quality,
+            &mut out,
+        )
+    };
+    if n == 0 || out.is_null() {
+        return Err(EncodeError::WebP("still encode failed".into()));
+    }
+    let bytes = unsafe { std::slice::from_raw_parts(out, n) }.to_vec();
+    unsafe { sys::WebPFree(out as *mut _) };
+    Ok(bytes)
 }
 
 /// Encode `src` as an animated WebP into `out`.

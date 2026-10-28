@@ -14,6 +14,12 @@ export interface Settings {
   preset: "best" | "balanced" | "smallest";
   output_dir: string;
   hotkeys: Hotkeys;
+  after_record: "editor" | "save";
+  keep_sessions: boolean;
+  filename_pattern: string;
+  export_scale: number;
+  max_size_mb: number | null;
+  autostart: boolean;
 }
 
 export interface RecStats {
@@ -24,7 +30,7 @@ export interface RecStats {
 }
 
 export interface Toast {
-  kind: "encoding" | "saved" | "cancelled" | "failed";
+  kind: "encoding" | "saved" | "cancelled" | "failed" | "warning" | "recovery";
   title: string;
   detail: string;
   path: string | null;

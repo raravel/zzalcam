@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use zzalcam_encode::{Format, Preset};
 
+const DEFAULT_PATTERN: &str = "zzalcam_{date}_{time}";
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(default)]
 pub struct Hotkeys {
@@ -41,6 +43,17 @@ pub struct Settings {
     pub preset: String,
     pub output_dir: PathBuf,
     pub hotkeys: Hotkeys,
+    /// `editor` (open the editor) or `save` (encode right away).
+    pub after_record: String,
+    /// Keep raw sessions after saving so they can be edited again.
+    pub keep_sessions: bool,
+    /// See `output::file_stem` for tokens.
+    pub filename_pattern: String,
+    /// Default export scale, 0.1–1.0.
+    pub export_scale: f32,
+    /// Default size target in MB; `None` = no limit.
+    pub max_size_mb: Option<f64>,
+    pub autostart: bool,
 }
 
 impl Default for Settings {
@@ -54,6 +67,12 @@ impl Default for Settings {
             preset: "balanced".into(),
             output_dir: PathBuf::new(),
             hotkeys: Hotkeys::default(),
+            after_record: "editor".into(),
+            keep_sessions: false,
+            filename_pattern: DEFAULT_PATTERN.into(),
+            export_scale: 1.0,
+            max_size_mb: None,
+            autostart: false,
         }
     }
 }
@@ -90,6 +109,18 @@ impl Settings {
         if !matches!(self.language.as_str(), "auto" | "ko" | "en") {
             self.language = "auto".into();
         }
+        if self.after_record != "save" {
+            self.after_record = "editor".into();
+        }
+        if self.filename_pattern.trim().is_empty() {
+            self.filename_pattern = DEFAULT_PATTERN.into();
+        }
+        self.export_scale = if self.export_scale.is_finite() {
+            self.export_scale.clamp(0.1, 1.0)
+        } else {
+            1.0
+        };
+        self.max_size_mb = self.max_size_mb.filter(|m| m.is_finite() && *m > 0.0);
         if self.output_dir.as_os_str().is_empty() {
             self.output_dir = default_output_dir(app);
         }

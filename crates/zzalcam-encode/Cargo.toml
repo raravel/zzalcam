@@ -11,3 +11,4 @@ rayon.workspace = true
 imagequant.workspace = true
 gif.workspace = true
 libwebp-sys.workspace = true
+fast_image_resize.workspace = true

@@ -261,6 +261,13 @@ impl SessionReader {
         Ok(raw)
     }
 
+    /// `(timestamp_ms, duration_ms)` of every frame, without decoding pixels.
+    pub fn timings(&self) -> Vec<(u64, u64)> {
+        (0..self.index.len())
+            .map(|i| (self.index[i].timestamp_ms, self.duration_of(i)))
+            .collect()
+    }
+
     /// Decode a single frame by replaying from its nearest preceding keyframe.
     pub fn frame(&self, i: usize) -> Result<TimedFrame, Error> {
         if i >= self.index.len() {
@@ -281,6 +288,52 @@ impl SessionReader {
     }
 }
 
+/// Random access for scrubbing: stepping forward replays only the frames in between, jumping
+/// elsewhere restarts from the nearest keyframe.
+pub struct SessionCursor {
+    reader: SessionReader,
+    file: File,
+    canvas: Vec<u8>,
+    at: Option<usize>,
+}
+
+impl SessionCursor {
+    pub fn new(reader: SessionReader) -> Result<Self, Error> {
+        let file = File::open(&reader.path)?;
+        let canvas = vec![0u8; reader.width as usize * reader.height as usize * 4];
+        Ok(Self {
+            reader,
+            file,
+            canvas,
+            at: None,
+        })
+    }
+
+    pub fn reader(&self) -> &SessionReader {
+        &self.reader
+    }
+
+    /// RGBA canvas of frame `i`.
+    pub fn seek(&mut self, i: usize) -> Result<&[u8], Error> {
+        if i >= self.reader.index.len() {
+            return Err(Error::InvalidSession("frame index out of range"));
+        }
+        let key = i - i % KEYFRAME_INTERVAL;
+        let from = match self.at {
+            Some(at) if at <= i && at >= key => at + 1,
+            _ => key,
+        };
+        // Until the replay completes the canvas matches no frame.
+        self.at = None;
+        for e in &self.reader.index[from..=i] {
+            let raw = self.reader.read_rect(&mut self.file, e)?;
+            blit(&mut self.canvas, self.reader.width, e.rect, &raw);
+        }
+        self.at = Some(i);
+        Ok(&self.canvas)
+    }
+}
+
 impl FrameSource for SessionReader {
     fn width(&self) -> u32 {
         self.width
@@ -292,19 +345,47 @@ impl FrameSource for SessionReader {
         self.index.len()
     }
     fn frames(&self) -> Box<dyn Iterator<Item = Result<TimedFrame, Error>> + '_> {
+        self.frames_from(0)
+    }
+
+    /// Replays from the keyframe before `start`; frames before `start` are decoded but not copied.
+    fn frames_from(
+        &self,
+        start: usize,
+    ) -> Box<dyn Iterator<Item = Result<TimedFrame, Error>> + '_> {
+        if start >= self.index.len() {
+            return Box::new(std::iter::empty());
+        }
         let mut file = match File::open(&self.path) {
             Ok(f) => f,
             Err(e) => return Box::new(std::iter::once(Err(e.into()))),
         };
+        let key = start - start % KEYFRAME_INTERVAL;
         let mut canvas = vec![0u8; self.width as usize * self.height as usize * 4];
-        Box::new(self.index.iter().enumerate().map(move |(i, e)| {
-            let raw = self.read_rect(&mut file, e)?;
-            blit(&mut canvas, self.width, e.rect, &raw);
-            Ok(TimedFrame {
-                frame: Frame::new(self.width, self.height, canvas.clone(), e.timestamp_ms),
-                duration_ms: self.duration_of(i),
-            })
-        }))
+        Box::new(
+            self.index
+                .iter()
+                .enumerate()
+                .skip(key)
+                .filter_map(move |(i, e)| {
+                    let raw = match self.read_rect(&mut file, e) {
+                        Ok(r) => r,
+                        Err(err) => return Some(Err(err)),
+                    };
+                    blit(&mut canvas, self.width, e.rect, &raw);
+                    (i >= start).then(|| {
+                        Ok(TimedFrame {
+                            frame: Frame::new(
+                                self.width,
+                                self.height,
+                                canvas.clone(),
+                                e.timestamp_ms,
+                            ),
+                            duration_ms: self.duration_of(i),
+                        })
+                    })
+                }),
+        )
     }
 }
 
@@ -348,6 +429,29 @@ mod tests {
         assert_eq!(frames[1].frame.rgba, b);
         assert_eq!(frames[1].duration_ms, 120);
         assert_eq!(rd.frame(1).unwrap().frame.rgba, b);
+        let from1: Vec<_> = rd.frames_from(1).map(Result::unwrap).collect();
+        assert_eq!(from1.len(), 1);
+        assert_eq!(from1[0].frame.rgba, b);
+        std::fs::remove_file(path).ok();
+    }
+
+    #[test]
+    fn cursor_matches_random_access() {
+        let path = tmp("cursor");
+        let (w, h) = (8, 8);
+        let mut wr = SessionWriter::create(&path, w, h).unwrap();
+        let frames: Vec<Vec<u8>> = (0..(KEYFRAME_INTERVAL as u8 + 10))
+            .map(|s| canvas(w, h, s))
+            .collect();
+        for (i, f) in frames.iter().enumerate() {
+            wr.push(f, i as u64 * 10).unwrap();
+        }
+        wr.finish(10_000).unwrap();
+        let mut cur = SessionCursor::new(SessionReader::open(&path).unwrap()).unwrap();
+        for i in [3, 4, 9, 2, KEYFRAME_INTERVAL + 5, KEYFRAME_INTERVAL + 6, 1] {
+            assert_eq!(cur.seek(i).unwrap(), &frames[i][..], "frame {i}");
+        }
+        assert_eq!(cur.reader().timings().len(), frames.len());
         std::fs::remove_file(path).ok();
     }
 

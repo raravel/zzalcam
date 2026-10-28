@@ -5,6 +5,7 @@
   import Settings from "./views/Settings.svelte";
   import ControlBar from "./views/ControlBar.svelte";
   import Toast from "./views/Toast.svelte";
+  import Editor from "./views/Editor.svelte";
 
   // One bundle serves every window; the window label decides the view.
   const label = getCurrentWindow().label;
@@ -13,7 +14,9 @@
 </script>
 
 {#await ready then}
-  {#if label === "controlbar"}
+  {#if label.startsWith("editor-")}
+    <Editor />
+  {:else if label === "controlbar"}
     <ControlBar />
   {:else if label === "toast"}
     <Toast />
