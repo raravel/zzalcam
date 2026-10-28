@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
+  import { Pause, Play, Square, X } from "@lucide/svelte";
   import { t } from "../lib/i18n.svelte";
   import { humanSize, type RecStats } from "../lib/types";
 
@@ -32,16 +33,16 @@
   <div class="actions">
     <button title={stats.paused ? t("bar.resume") : t("bar.pause")} onclick={() => control("pause")}>
       {#if stats.paused}
-        <svg viewBox="0 0 16 16"><path d="M4 2.5v11l9-5.5z" /></svg>
+        <Play size={16} fill="currentColor" />
       {:else}
-        <svg viewBox="0 0 16 16"><path d="M4 2.5h3v11H4zM9 2.5h3v11H9z" /></svg>
+        <Pause size={16} fill="currentColor" />
       {/if}
     </button>
     <button class="stop" title={t("bar.stop")} onclick={() => control("stop")}>
-      <svg viewBox="0 0 16 16"><rect x="3" y="3" width="10" height="10" rx="1.5" /></svg>
+      <Square size={14} fill="currentColor" />
     </button>
     <button title={t("bar.cancel")} onclick={() => control("cancel")}>
-      <svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" /></svg>
+      <X size={16} />
     </button>
   </div>
 </div>
@@ -56,13 +57,14 @@
     border-radius: 999px;
     background: var(--hud);
     color: var(--hud-text);
+    box-shadow: inset 0 0 0 1px var(--hud-border);
     font-variant-numeric: tabular-nums;
   }
   .dot {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--danger);
+    background: var(--hud-danger);
     animation: pulse 1.2s ease-in-out infinite;
   }
   .paused .dot {
@@ -73,7 +75,7 @@
     font-weight: 600;
   }
   .meta {
-    color: #aab2c0;
+    color: var(--hud-muted);
     font-size: 12px;
     white-space: nowrap;
     overflow: hidden;
@@ -94,15 +96,13 @@
     background: transparent;
   }
   button:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.1);
+  }
+  button:active {
+    background: rgba(255, 255, 255, 0.06);
   }
   button.stop {
-    color: var(--danger);
-  }
-  svg {
-    width: 16px;
-    height: 16px;
-    fill: currentColor;
+    color: var(--hud-danger);
   }
   @keyframes pulse {
     50% {

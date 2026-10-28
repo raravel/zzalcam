@@ -3,6 +3,19 @@
   import { invoke } from "@tauri-apps/api/core";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { ask, save } from "@tauri-apps/plugin-dialog";
+  import {
+    ArrowLeftToLine,
+    ArrowRightToLine,
+    Pause,
+    Play,
+    Redo2,
+    RotateCcw,
+    Scissors,
+    StepBack,
+    StepForward,
+    Trash2,
+    Undo2,
+  } from "@lucide/svelte";
   import { t } from "../lib/i18n.svelte";
   import { humanSize } from "../lib/types";
 
@@ -230,6 +243,33 @@
   // Crop as it was when a numeric field gained focus, for its undo step.
   let lastCrop: Crop | null = null;
 
+  // --- frame strip: the wheel scrolls it sideways; edges fade where more frames are hidden
+  let strip = $state<HTMLElement | null>(null);
+  let fadeStart = $state(false);
+  let fadeEnd = $state(false);
+  function updateFades() {
+    if (!strip) return;
+    fadeStart = strip.scrollLeft > 1;
+    fadeEnd = strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 1;
+  }
+  $effect(() => {
+    if (!strip) return;
+    const el = strip;
+    const onWheel = (e: WheelEvent) => {
+      if (e.deltaX !== 0 || e.shiftKey || e.ctrlKey) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    const ro = new ResizeObserver(updateFades);
+    ro.observe(el);
+    updateFades();
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      ro.disconnect();
+    };
+  });
+
   // --- export
   function editPayload() {
     const c = edit.crop;
@@ -320,39 +360,41 @@
       </div>
 
       <div class="transport">
-        <button title={t("editor.prev")} onclick={() => (stop(), step(-1))}>◀</button>
-        <button class="play" title={playing ? t("editor.pause") : t("editor.play")} onclick={() => (playing ? stop() : play())}>
-          {playing ? "❚❚" : "▶"}
+        <button class="btn icon" title={t("editor.prev")} onclick={() => (stop(), step(-1))}><StepBack size={16} /></button>
+        <button class="btn icon play" title={playing ? t("editor.pause") : t("editor.play")} onclick={() => (playing ? stop() : play())}>
+          {#if playing}<Pause size={16} fill="currentColor" />{:else}<Play size={16} fill="currentColor" />{/if}
         </button>
-        <button title={t("editor.next")} onclick={() => (stop(), step(1))}>▶</button>
+        <button class="btn icon" title={t("editor.next")} onclick={() => (stop(), step(1))}><StepForward size={16} /></button>
         <span class="pos">#{current + 1} · {info.timings[current][1]}ms</span>
         <span class="sep"></span>
-        <button onclick={trimStart}>⇤ {t("editor.trim_start")}</button>
-        <button onclick={trimEnd}>{t("editor.trim_end")} ⇥</button>
-        <button onclick={deleteSelected}>🗑 {t("editor.delete")}</button>
+        <button class="btn" onclick={trimStart}><ArrowLeftToLine size={16} />{t("editor.trim_start")}</button>
+        <button class="btn" onclick={trimEnd}>{t("editor.trim_end")}<ArrowRightToLine size={16} /></button>
+        <button class="btn" onclick={deleteSelected}><Trash2 size={16} />{t("editor.delete")}</button>
         {#if [...(selection.size ? selection : [current])].some((i) => deletedSet.has(i))}
-          <button onclick={restoreSelected}>{t("editor.restore")}</button>
+          <button class="btn" onclick={restoreSelected}><RotateCcw size={16} />{t("editor.restore")}</button>
         {/if}
         <span class="sep"></span>
-        <button title={t("editor.undo")} onclick={undo}>↶</button>
-        <button title={t("editor.redo")} onclick={redo}>↷</button>
+        <button class="btn icon" title={t("editor.undo")} onclick={undo}><Undo2 size={16} /></button>
+        <button class="btn icon" title={t("editor.redo")} onclick={redo}><Redo2 size={16} /></button>
       </div>
 
-      <div class="strip">
-        {#each info.timings as [, dur], i}
-          <button
-            id="f{i}"
-            class="thumb"
-            class:current={i === current}
-            class:selected={selection.has(i)}
-            class:deleted={deletedSet.has(i)}
-            class:trimmed={i < edit.trim[0] || i >= edit.trim[1]}
-            onclick={(e) => (stop(), pick(i, e))}
-          >
-            <img loading="lazy" src={thumbUrl(i)} alt="" draggable="false" />
-            <span>{i + 1} · {dur}ms</span>
-          </button>
-        {/each}
+      <div class="strip-wrap">
+        <div class="strip" class:fade-start={fadeStart} class:fade-end={fadeEnd} bind:this={strip} onscroll={updateFades}>
+          {#each info.timings as [, dur], i}
+            <button
+              id="f{i}"
+              class="thumb"
+              class:current={i === current}
+              class:selected={selection.has(i)}
+              class:deleted={deletedSet.has(i)}
+              class:trimmed={i < edit.trim[0] || i >= edit.trim[1]}
+              onclick={(e) => (stop(), pick(i, e))}
+            >
+              <img loading="lazy" src={thumbUrl(i)} alt="" draggable="false" />
+              <span>{i + 1} · {dur}ms</span>
+            </button>
+          {/each}
+        </div>
       </div>
       <p class="hint">{t("editor.hint")}</p>
     </section>
@@ -380,18 +422,21 @@
       </label>
       <label>
         {t("editor.max_size")}
-        <input type="number" min="0" step="0.5" placeholder={t("editor.no_limit")} bind:value={out.max_mb} />
+        <span class="unit-input">
+          <input type="number" min="0" step="0.5" placeholder={t("editor.no_limit")} bind:value={out.max_mb} />
+          <span class="unit">MB</span>
+        </span>
       </label>
 
       <h2>{t("editor.crop")}</h2>
-      <button class="wide" class:active={cropping} onclick={() => (cropping = !cropping)}>✂ {t("editor.crop")}</button>
+      <button class="btn wide" class:on={cropping} onclick={() => (cropping = !cropping)}><Scissors size={16} />{t("editor.crop")}</button>
       {#if edit.crop}
         <div class="crop-fields">
           {#each ["x", "y", "w", "h"] as const as k}
             <label>{k}<input type="number" bind:value={edit.crop[k]} onfocus={() => (lastCrop = edit.crop && { ...edit.crop })} onchange={clampCrop} /></label>
           {/each}
         </div>
-        <button class="wide" onclick={() => change(() => (edit.crop = null))}>{t("editor.crop_reset")}</button>
+        <button class="btn wide" onclick={() => change(() => (edit.crop = null))}><RotateCcw size={16} />{t("editor.crop_reset")}</button>
       {/if}
 
       <div class="stats">
@@ -406,10 +451,10 @@
 
       {#if error}<p class="error">{error}</p>{/if}
       <div class="actions">
-        <button class="primary" disabled={saving || !kept.length} onclick={() => doSave(false)}>
+        <button class="btn primary" disabled={saving || !kept.length} onclick={() => doSave(false)}>
           {saving ? t("editor.saving") : t("editor.save")}
         </button>
-        <button disabled={saving || !kept.length} onclick={() => doSave(true)}>{t("editor.save_as")}</button>
+        <button class="btn" disabled={saving || !kept.length} onclick={() => doSave(true)}>{t("editor.save_as")}</button>
       </div>
     </aside>
   </div>
@@ -420,7 +465,7 @@
 <style>
   .editor {
     display: grid;
-    grid-template-columns: 1fr 260px;
+    grid-template-columns: 1fr 272px;
     height: 100vh;
   }
   .stage {
@@ -447,7 +492,8 @@
     max-width: 100%;
     max-height: calc(100vh - 260px);
     object-fit: contain;
-    box-shadow: 0 2px 16px #0003;
+    border-radius: 4px;
+    box-shadow: 0 4px 24px #0004;
   }
   .preview.cropping {
     cursor: crosshair;
@@ -473,60 +519,70 @@
     background: var(--surface);
     flex-wrap: wrap;
   }
-  .transport button,
-  aside button,
-  select,
-  input {
+  .transport .btn {
     height: 30px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    background: var(--bg);
-    font: inherit;
     font-size: 13px;
-    color: inherit;
   }
-  .transport .play {
-    min-width: 44px;
+  .transport .btn.icon {
+    width: 30px;
+  }
+  .transport .btn.play {
+    width: 40px;
   }
   .pos {
     font-variant-numeric: tabular-nums;
     color: var(--muted);
     margin: 0 6px;
     font-size: 12px;
+    min-width: 72px;
   }
   .sep {
     width: 1px;
     height: 20px;
-    background: var(--border);
+    background: var(--control-border);
     margin: 0 6px;
+  }
+  .strip-wrap {
+    background: var(--surface);
   }
   .strip {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     overflow-x: auto;
-    padding: 8px 12px;
-    background: var(--surface);
-    border-top: 1px solid var(--border);
+    padding: 8px 12px 4px;
     min-height: 112px;
+    --fade: 40px;
+  }
+  .strip.fade-end {
+    mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  }
+  .strip.fade-start {
+    mask-image: linear-gradient(to right, transparent, #000 var(--fade));
+  }
+  .strip.fade-start.fade-end {
+    mask-image: linear-gradient(to right, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
   }
   .thumb {
     flex: none;
     width: 124px;
-    padding: 2px;
+    padding: 3px 3px 2px;
     border: 2px solid transparent;
-    border-radius: 6px;
-    background: var(--bg);
+    border-radius: 8px;
+    background: var(--control);
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+    transition: background 0.1s;
+  }
+  .thumb:hover {
+    background: var(--control-hover);
   }
   .thumb img {
     width: 100%;
-    height: 72px;
+    height: 70px;
     object-fit: contain;
     background: #0002;
-    border-radius: 3px;
+    border-radius: 4px;
   }
   .thumb span {
     font-size: 11px;
@@ -563,11 +619,8 @@
     overflow-y: auto;
   }
   h2 {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--muted);
     margin: 6px 0 0;
   }
   label {
@@ -577,24 +630,38 @@
     font-size: 12px;
     color: var(--muted);
   }
+  label select,
+  label input {
+    color: var(--text);
+    font-size: 13px;
+  }
   .segmented {
     display: flex;
   }
   .segmented button {
     flex: 1;
-    border-radius: 0;
   }
-  .segmented button:first-child {
-    border-radius: 7px 0 0 7px;
+  .unit-input {
+    position: relative;
+    display: flex;
   }
-  .segmented button:last-child {
-    border-radius: 0 7px 7px 0;
-    border-left: 0;
+  .unit-input input {
+    flex: 1;
+    min-width: 0;
+    padding-right: 36px;
   }
-  .active {
-    background: var(--accent) !important;
-    border-color: var(--accent) !important;
-    color: var(--accent-text) !important;
+  .unit-input input::-webkit-inner-spin-button,
+  .unit-input input::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+  .unit {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
   }
   .wide {
     width: 100%;
@@ -609,6 +676,9 @@
   }
   .stats {
     margin-top: auto;
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    background: var(--subtle);
     font-size: 12px;
     color: var(--muted);
     display: flex;
@@ -623,16 +693,8 @@
     flex-direction: column;
     gap: 6px;
   }
-  .primary {
-    background: var(--accent) !important;
-    border-color: var(--accent) !important;
-    color: var(--accent-text) !important;
-    font-weight: 600;
-    height: 36px !important;
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
+  .actions .primary {
+    height: 36px;
   }
   .error {
     color: var(--danger);

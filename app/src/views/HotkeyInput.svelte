@@ -62,13 +62,18 @@
     min-width: 170px;
     height: 32px;
     padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg);
+    border: 1px solid var(--control-border);
+    border-bottom-color: var(--control-border-strong);
+    border-radius: 6px;
+    background: var(--control);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 3px;
+    transition: background 0.1s;
+  }
+  .hotkey:hover {
+    background: var(--control-hover);
   }
   .listening {
     border-color: var(--accent);
@@ -82,8 +87,9 @@
     font-size: 12px;
     padding: 1px 6px;
     border-radius: 4px;
-    border: 1px solid var(--border);
-    background: var(--surface);
+    border: 1px solid var(--control-border);
+    border-bottom-width: 2px;
+    background: var(--subtle);
   }
   .plus {
     color: var(--muted);
