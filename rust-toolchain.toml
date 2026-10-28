@@ -1,0 +1,4 @@
+# Pinned so a new Rust release cannot break CI with new lints; bump deliberately.
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]

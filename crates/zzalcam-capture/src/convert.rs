@@ -18,7 +18,12 @@ pub fn bgra_to_rgba(
     for y in 0..h {
         let s = &src[y * src_pitch..][..w * 4];
         let d = &mut canvas[((dy + y) * canvas_w + dx) * 4..][..w * 4];
-        for (s, d) in s.chunks_exact(4).zip(d.chunks_exact_mut(4)) {
+        for (s, d) in s
+            .as_chunks::<4>()
+            .0
+            .iter()
+            .zip(d.as_chunks_mut::<4>().0.iter_mut())
+        {
             let v = u32::from_le_bytes([s[0], s[1], s[2], s[3]]);
             let o = ((v >> 16) & 0xff) | (v & 0xff00) | ((v & 0xff) << 16) | 0xff00_0000;
             d.copy_from_slice(&o.to_le_bytes());

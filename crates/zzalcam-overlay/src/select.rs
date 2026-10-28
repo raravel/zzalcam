@@ -494,7 +494,7 @@ fn magnifier_pixels(c: POINT) -> Option<Vec<u8>> {
                     )
                     .to_vec();
                     // GDI leaves alpha at 0; the bitmap is premultiplied, so make it opaque.
-                    v.chunks_exact_mut(4).for_each(|p| p[3] = 255);
+                    v.as_chunks_mut::<4>().0.iter_mut().for_each(|p| p[3] = 255);
                     v
                 });
                 SelectObject(dc, old);

@@ -275,7 +275,12 @@ pub fn encode<W: Write>(
                     let pixels = crop(&cur, w, r);
                     let mut masked = pixels.clone();
                     let before = crop(p, w, r);
-                    for (m, b) in masked.chunks_exact_mut(4).zip(before.chunks_exact(4)) {
+                    for (m, b) in masked
+                        .as_chunks_mut::<4>()
+                        .0
+                        .iter_mut()
+                        .zip(before.as_chunks::<4>().0.iter())
+                    {
                         if m == b {
                             m.copy_from_slice(&[0, 0, 0, 0]);
                         }

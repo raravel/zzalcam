@@ -102,7 +102,9 @@ struct Encoded {
 
 fn to_rgba(bytes: &[u8]) -> Vec<RGBA> {
     bytes
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .map(|c| RGBA::new(c[0], c[1], c[2], c[3]))
         .collect()
 }
@@ -352,7 +354,12 @@ fn diff_pass(
             let start = y * stride + rect.x as usize * 4;
             let ref_row = &mut reference[start..start + row_len];
             let cur_row = &cur[start..start + row_len];
-            for (r, c) in ref_row.chunks_exact_mut(4).zip(cur_row.chunks_exact(4)) {
+            for (r, c) in ref_row
+                .as_chunks_mut::<4>()
+                .0
+                .iter_mut()
+                .zip(cur_row.as_chunks::<4>().0.iter())
+            {
                 let rp = [r[0], r[1], r[2], r[3]];
                 let cp = [c[0], c[1], c[2], c[3]];
                 if pixel_changed(rp, cp, opts.tolerance) {
