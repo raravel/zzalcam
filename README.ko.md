@@ -4,7 +4,9 @@
 
 [English](README.md) · [변경 기록](CHANGELOG.md) · [설계 문서](docs/design.md)
 
-<!-- 데모: zzalcam으로 직접 docs/demo.gif를 녹화해서 여기에 넣으세요. -->
+<p align="center">
+  <img src="docs/images/banner.gif" alt="영역 선택, 녹화, 편집기에서 다듬기, 저장까지의 흐름" width="960">
+</p>
 
 zzalcam은 창, UI 컨트롤 하나, 드래그한 영역, 모니터 하나 또는 전체 모니터를 녹화해서, 보기 좋은 화질을 유지하는 선에서 최대한 작은 GIF나 WebP로 만듭니다. 10초 클립을 저장하는 데 몇 초면 충분합니다.
 
@@ -22,6 +24,19 @@ zzalcam은 창, UI 컨트롤 하나, 드래그한 영역, 모니터 하나 또�
 - **공유에 최적화** — 저장한 파일을 클립보드에 복사합니다(디스코드, 슬랙 등에 바로 붙여넣기).
 - **녹화에 찍히지 않음** — 테두리, 컨트롤 바, 선택 화면, 알림은 녹화에서 제외됩니다.
 - 크래시 복구, 한국어·영어 UI, 포터블 모드, 명령줄 도구.
+
+## 스크린샷
+
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/editor-ko-dark.png">
+  <img src="docs/images/editor-ko-light.png" alt="편집기: 프레임 목록, 자르기, 크롭, 예상 용량" width="480">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-ko-dark.png">
+  <img src="docs/images/settings-ko-light.png" alt="설정" width="285">
+</picture>
+</p>
 
 ## 설치
 

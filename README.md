@@ -4,7 +4,9 @@
 
 [한국어](README.ko.md) · [Changelog](CHANGELOG.md) · [Design notes](docs/design.md)
 
-<!-- Demo: record docs/demo.gif with zzalcam itself and reference it here. -->
+<p align="center">
+  <img src="docs/images/banner.gif" alt="Picking a region, recording it, trimming in the editor and saving" width="960">
+</p>
 
 zzalcam records a window, a single UI control, a dragged region, one monitor or all of them, and
 turns it into a GIF or WebP that is as small as it can be without looking worse — fast enough that
@@ -27,6 +29,19 @@ saving a 10-second clip takes a couple of seconds.
 - **Made for sharing** — the saved file is copied to the clipboard (paste straight into Discord, Slack, …).
 - **Never in the shot** — the border, control bar, picker and notifications are excluded from capture.
 - Crash recovery, Korean and English UI, portable mode, a command-line tool.
+
+## Screenshots
+
+<p align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/editor-en-dark.png">
+  <img src="docs/images/editor-en-light.png" alt="The editor: frame strip, trim, crop, size estimate" width="480">
+</picture>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/settings-en-dark.png">
+  <img src="docs/images/settings-en-light.png" alt="Settings" width="285">
+</picture>
+</p>
 
 ## Install
 
