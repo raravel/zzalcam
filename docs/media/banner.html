@@ -1,0 +1,382 @@
+<!doctype html>
+<!--
+  README banner, drawn as a deterministic timeline: seek(t) puts every element where it is at
+  t seconds. render.py screenshots it frame by frame; see docs/media/README.md.
+  banner.html          the whole scene (960×480)
+  banner.html?clip     only the recorded card (440×250), used as the editor's sample session
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  body.scene { width: 960px; height: 480px; overflow: hidden; position: relative; }
+  body.clip-only { width: 440px; height: 250px; overflow: hidden; }
+  .abs { position: absolute; }
+  .hidden { display: none !important; }
+
+  /* --- desktop */
+  .wallpaper {
+    inset: 0;
+    background:
+      radial-gradient(60% 80% at 75% 20%, #4f7cff 0%, transparent 60%),
+      radial-gradient(70% 90% at 15% 90%, #7a4dff 0%, transparent 60%),
+      linear-gradient(135deg, #1a2b6b, #0e1640);
+  }
+  .window {
+    left: 150px; top: 46px; width: 660px; height: 380px;
+    border-radius: 8px;
+    background: #f3f3f3;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+  }
+  .titlebar {
+    height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    font-size: 12px; color: #1b1b1b;
+  }
+  .titlebar .logo { width: 14px; height: 14px; border-radius: 3px; background: #0067c0; }
+  .titlebar .caps { margin-left: auto; display: flex; gap: 22px; color: #616161; letter-spacing: 2px; }
+  .sidebar { left: 0; top: 32px; width: 140px; bottom: 0; padding: 10px 8px; }
+  .nav { height: 32px; border-radius: 5px; display: flex; align-items: center; gap: 10px; padding: 0 10px; color: #333; font-size: 13px; }
+  .nav i { width: 14px; height: 14px; border-radius: 4px; background: #c9cfdb; }
+  .nav.on { background: #e6e9ef; }
+  .nav.on i { background: #0067c0; }
+  .pane { left: 140px; top: 32px; right: 0; bottom: 0; background: #fbfbfb; border-top-left-radius: 8px; border: 1px solid #e5e5e5; }
+  .pane h1 { margin: 14px 20px 0; font: 600 20px "Segoe UI Variable Display", "Segoe UI", sans-serif; color: #1b1b1b; }
+  .pane .sub { margin: 2px 20px; color: #616161; font-size: 12px; }
+
+  /* --- the recorded card (also rendered alone in ?clip mode) */
+  .card {
+    width: 440px; height: 250px; padding: 16px 18px;
+    background: #ffffff; color: #1b1b1b;
+    border: 1px solid #e5e5e5; border-radius: 8px;
+    display: grid; grid-template-rows: auto 1fr auto; gap: 8px;
+  }
+  .scene .card { left: 310px; top: 146px; }
+  .card-head { display: flex; align-items: baseline; gap: 10px; }
+  .card-head .label { color: #616161; font-size: 12px; }
+  .card-head .big { font: 600 26px "Segoe UI Variable Display", "Segoe UI", sans-serif; font-variant-numeric: tabular-nums; }
+  .card-head .delta { margin-left: auto; color: #2f9e5a; font-weight: 600; font-size: 12px; }
+  .bars { display: flex; align-items: flex-end; gap: 14px; padding: 0 4px; border-bottom: 1px solid #e5e5e5; }
+  .bar { flex: 1; position: relative; height: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 3px; }
+  .bar b, .bar s { display: block; width: 50%; border-radius: 4px 4px 0 0; }
+  .bar b { background: linear-gradient(#4f8dff, #0067c0); }
+  .bar s { background: #c9d6ec; }
+  .card-foot { display: flex; align-items: center; justify-content: space-between; color: #616161; font-size: 12px; }
+  .card-foot .days { display: flex; gap: 0; flex: 1; justify-content: space-around; padding-right: 150px; }
+  .switch { display: flex; align-items: center; gap: 8px; color: #1b1b1b; }
+  .switch .track { width: 36px; height: 18px; border-radius: 999px; border: 1px solid #8a8a8a; position: relative; transition: none; }
+  .switch .knob { position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: #8a8a8a; }
+  .switch.on .track { background: #0067c0; border-color: #0067c0; }
+  .switch.on .knob { background: #fff; left: 21px; }
+
+  /* --- picker (same colours as crates/zzalcam-overlay/src/select.rs) */
+  .dim { background: rgba(0, 0, 0, 0.45); }
+  .sel { border: 2px solid rgb(47, 128, 237); }
+  .sel-label, .help {
+    background: rgba(20, 22, 28, 0.9); color: #fff; border-radius: 4px;
+    font-size: 12px; padding: 3px 8px; white-space: pre;
+  }
+  .help { left: 50%; bottom: 18px; transform: translateX(-50%); border-radius: 8px; padding: 7px 14px; color: rgb(235, 238, 245); }
+  .guide-h { left: 0; right: 0; height: 1px; background: rgba(255, 255, 255, 0.35); }
+  .guide-v { top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.35); }
+
+  /* --- recording border, countdown, control bar (frame.rs, ControlBar.svelte) */
+  .rec { border: 3px solid rgb(239, 68, 68); }
+  .countdown {
+    background: rgba(0, 0, 0, 0.35); color: #fff; display: grid; place-items: center;
+    font: 700 96px "Segoe UI", sans-serif;
+  }
+  .hud {
+    background: rgba(28, 28, 28, 0.94); color: #f5f5f5;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+  .bar-hud {
+    width: 340px; height: 44px; border-radius: 999px;
+    display: flex; align-items: center; gap: 10px; padding: 0 6px 0 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .bar-hud .dot { width: 10px; height: 10px; border-radius: 50%; background: #ff6b5e; }
+  .bar-hud .time { font-weight: 600; }
+  .bar-hud .meta { flex: 1; color: #b4b4b4; font-size: 12px; white-space: nowrap; }
+  .bar-hud .btns { display: flex; gap: 2px; }
+  .bar-hud .btn { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
+  .bar-hud .btn.hover { background: rgba(255, 255, 255, 0.1); }
+  .bar-hud .stop { color: #ff6b5e; }
+
+  /* --- editor and toast */
+  .editor {
+    border-radius: 8px; overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  .editor img { display: block; width: 100%; }
+  .toast {
+    right: 20px; bottom: 20px; width: 450px; height: 92px; border-radius: 12px;
+    display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 0 8px 0 14px;
+  }
+  .toast .head { display: flex; align-items: center; gap: 12px; }
+  .toast .icon { width: 28px; height: 28px; border-radius: 50%; background: #2f9e5a; display: grid; place-items: center; }
+  .toast .text { flex: 1; min-width: 0; }
+  .toast .title { font-weight: 600; }
+  .toast .close { width: 28px; height: 28px; display: grid; place-items: center; color: #b4b4b4; }
+  .toast .detail { color: #b4b4b4; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast .actions { padding-left: 40px; }
+  .toast .actions span {
+    display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px;
+    border-radius: 6px; background: rgba(255, 255, 255, 0.1); font-size: 12px;
+  }
+  .keys { left: 50%; top: 18px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; color: #fff; font-size: 13px; }
+  .keys kbd {
+    font: 600 13px "Segoe UI", sans-serif; padding: 5px 10px; border-radius: 6px;
+    background: rgba(255, 255, 255, 0.16); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+  }
+
+  /* --- title card */
+  .titlecard {
+    inset: 0; display: grid; place-content: center; text-align: center; color: #fff;
+    background: rgba(10, 14, 36, 0.72); backdrop-filter: blur(6px);
+  }
+  .titlecard .name { font: 700 64px "Segoe UI Variable Display", "Segoe UI", sans-serif; letter-spacing: -1px; }
+  .titlecard .tag { margin-top: 4px; font-size: 18px; color: #d6dcf5; }
+  .titlecard .formats { margin-top: 18px; display: flex; gap: 8px; justify-content: center; }
+  .titlecard .formats span { padding: 4px 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); font-size: 13px; font-weight: 600; }
+
+  .cursor { width: 20px; height: 20px; pointer-events: none; }
+  .ripple { width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.9); }
+</style>
+</head>
+<body>
+<template id="card-tpl">
+  <div class="card">
+    <div class="card-head">
+      <span class="label">Weekly visits</span>
+      <span class="big">0</span>
+      <span class="delta">▲ 18%</span>
+    </div>
+    <div class="bars"></div>
+    <div class="card-foot">
+      <div class="days"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+      <div class="switch"><div class="track"><div class="knob"></div></div>Last week</div>
+    </div>
+  </div>
+</template>
+
+<script>
+  const CLIP = location.search.includes("clip");
+  document.body.className = CLIP ? "clip-only" : "scene";
+
+  const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
+  const span = (t, a, b) => ease((t - a) / (b - a));
+  const lerp = (a, b, k) => a + (b - a) * k;
+  const el = (cls, parent = document.body, tag = "div") => {
+    const e = document.createElement(tag);
+    e.className = cls;
+    parent.appendChild(e);
+    return e;
+  };
+  const place = (e, x, y, w, h) => {
+    e.style.left = x + "px";
+    e.style.top = y + "px";
+    if (w !== undefined) e.style.width = w + "px";
+    if (h !== undefined) e.style.height = h + "px";
+  };
+  const show = (e, on) => e.classList.toggle("hidden", !on);
+
+  // ---- the recorded card: animates over clip time c = 0..3 s
+  const THIS = [42, 58, 51, 76, 88, 64, 96];
+  const LAST = [36, 41, 47, 55, 60, 52, 70];
+  function makeCard(parent) {
+    parent.appendChild(document.getElementById("card-tpl").content.cloneNode(true));
+    const card = parent.lastElementChild;
+    const bars = card.querySelector(".bars");
+    const cols = THIS.map(() => {
+      const bar = el("bar", bars);
+      return { last: el("", bar, "s"), cur: el("", bar, "b") };
+    });
+    return {
+      card,
+      seek(c) {
+        cols.forEach((col, i) => {
+          col.cur.style.height = THIS[i] * span(c, 0.1 + i * 0.1, 0.7 + i * 0.1) + "%";
+          const k = span(c, 1.9 + i * 0.05, 2.4 + i * 0.05);
+          col.last.style.height = LAST[i] * k + "%";
+          col.last.style.display = k > 0 ? "block" : "none";
+        });
+        card.querySelector(".big").textContent = Math.round(12480 * span(c, 0.1, 1.4)).toLocaleString("en-US");
+        card.querySelector(".switch").classList.toggle("on", c >= 1.8);
+      },
+    };
+  }
+
+  if (CLIP) {
+    const card = makeCard(document.body);
+    window.seek = (c) => card.seek(c);
+    window.DURATION = 3.0;
+  } else {
+    // ---- scene
+    const R = { x: 310, y: 146, w: 440, h: 250 }; // the card, i.e. the region that gets recorded
+    el("abs wallpaper");
+    const win = el("abs window");
+    win.innerHTML = `
+      <div class="titlebar"><span class="logo"></span>Analytics<span class="caps">—&nbsp;☐&nbsp;✕</span></div>
+      <div class="abs sidebar">
+        <div class="nav"><i></i>Home</div><div class="nav on"><i></i>Reports</div>
+        <div class="nav"><i></i>Visitors</div><div class="nav"><i></i>Settings</div>
+      </div>
+      <div class="abs pane"><h1>Reports</h1><div class="sub">Traffic for the last 7 days</div></div>`;
+    const card = makeCard(document.body);
+    card.card.classList.add("abs");
+
+    const keys = el("abs keys");
+    keys.innerHTML = "<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>1</kbd>";
+    const dims = [0, 1, 2, 3].map(() => el("abs dim"));
+    const gh = el("abs guide-h");
+    const gv = el("abs guide-v");
+    const sel = el("abs sel");
+    const selLabel = el("abs sel-label");
+    const help = el("abs help");
+    help.textContent = "Drag: region · Click: window · Tab: control · F: monitor · A: all · Esc: cancel";
+    const rec = el("abs rec");
+    const countdown = el("abs countdown");
+    const bar = el("abs hud bar-hud");
+    bar.innerHTML = `<span class="dot"></span><span class="time">00:00</span><span class="meta"></span>
+      <div class="btns">
+        <span class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></span>
+        <span class="btn stop"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"/></svg></span>
+        <span class="btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>`;
+    const editor = el("abs editor");
+    editor.innerHTML = `<img src="../images/editor-en-dark.png" />`;
+    const toast = el("abs hud toast");
+    toast.innerHTML = `
+      <div class="head">
+        <div class="icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+        <div class="text"><div class="title">Saved</div><div class="detail">zzalcam_20261028_142310.gif · 86 KB · Copied to clipboard</div></div>
+        <span class="close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+      </div>
+      <div class="actions"><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>Open folder</span></div>`;
+    const title = el("abs titlecard");
+    title.innerHTML = `<div class="name">zzalcam</div>
+      <div class="tag">Fast, small GIF and WebP screen recordings for Windows</div>
+      <div class="formats"><span>GIF</span><span>WebP</span><span>Free &amp; open source</span></div>`;
+    const ripple = el("abs ripple");
+    const cursor = el("abs cursor");
+    cursor.innerHTML = `<svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 1 L2 16 L6 12.5 L8.6 18.4 L11.2 17.2 L8.7 11.6 L13.8 11.4 Z" fill="#fff" stroke="#000" stroke-width="1.1" stroke-linejoin="round"/></svg>`;
+
+    // Editor screenshot is 1120×760; shown at 0.6 and centred, Save button at (984, 688) in it.
+    const ED = { s: 0.6, w: 672, h: 456 };
+    ED.x = (960 - ED.w) / 2;
+    ED.y = (480 - ED.h) / 2;
+    const SAVE = { x: ED.x + 984 * ED.s, y: ED.y + 688 * ED.s };
+    const STOP = { x: R.x + (R.w - 340) / 2 + 340 - 6 - 36 - 34 + 17, y: R.y + R.h + 14 + 22 };
+
+    // Cursor path: [time, x, y]; it eases between consecutive points.
+    const PATH = [
+      [0, 560, 300], [0.8, 520, 280], [1.7, R.x, R.y], [2.7, R.x + R.w, R.y + R.h],
+      [6.3, R.x + R.w, R.y + R.h], [7.0, STOP.x, STOP.y], [7.9, STOP.x, STOP.y],
+      [8.7, SAVE.x, SAVE.y], [10.6, SAVE.x, SAVE.y], [11.4, 600, 330],
+    ];
+    const CLICKS = [7.1, 8.9];
+    // Timings are compressed for the banner (the real countdown is 1 s per number).
+    const T = { picker: 0.9, drag: 1.7, release: 2.7, count: 2.9, rec: 4.1, stop: 7.1, edIn: 7.4, save: 8.9, toast: 9.1, title: 10.6 };
+    window.DURATION = 13.2;
+
+    function cursorAt(t) {
+      for (let i = 1; i < PATH.length; i++) {
+        const [t1, x1, y1] = PATH[i];
+        const [t0, x0, y0] = PATH[i - 1];
+        if (t <= t1) {
+          // While dragging the selection the motion is linear, like a steady hand.
+          const k = i === 3 ? Math.min(1, (t - t0) / (t1 - t0)) : span(t, t0, t1);
+          return [lerp(x0, x1, k), lerp(y0, y1, k)];
+        }
+      }
+      return PATH[PATH.length - 1].slice(1);
+    }
+
+    window.seek = (t) => {
+      const [cx, cy] = cursorAt(t);
+      place(cursor, cx, cy);
+
+      show(keys, t >= 0.45 && t < T.release);
+      keys.style.opacity = span(t, 0.45, 0.6);
+
+      // Picker: dim everything but the selection; guides follow the cursor.
+      const picking = t >= T.picker && t < T.release;
+      let s = null;
+      if (t >= T.drag && t < T.release) {
+        s = { x: R.x, y: R.y, w: Math.max(1, Math.round(cx - R.x)), h: Math.max(1, Math.round(cy - R.y)) };
+      }
+      const hole = s ?? { x: 0, y: 0, w: 0, h: 0 };
+      dims.forEach((d) => show(d, picking));
+      if (picking) {
+        place(dims[0], 0, 0, 960, hole.y);
+        place(dims[1], 0, hole.y + hole.h, 960, 480 - hole.y - hole.h);
+        place(dims[2], 0, hole.y, hole.x, hole.h);
+        place(dims[3], hole.x + hole.w, hole.y, 960 - hole.x - hole.w, hole.h);
+      }
+      show(gh, picking);
+      show(gv, picking);
+      place(gh, 0, Math.round(cy));
+      place(gv, Math.round(cx), 0);
+      show(help, picking);
+      show(sel, picking && !!s);
+      show(selLabel, picking && !!s);
+      if (s) {
+        place(sel, s.x - 1, s.y - 1, s.w + 2, s.h + 2);
+        selLabel.textContent = `Region  ${s.w} × ${s.h}`;
+        place(selLabel, s.x, s.y - 28);
+      }
+
+      // Recording: border, countdown, then the control bar while the card animates.
+      const recording = t >= T.release && t < T.stop;
+      show(rec, recording);
+      place(rec, R.x - 3, R.y - 3, R.w + 6, R.h + 6);
+      show(countdown, t >= T.count && t < T.rec);
+      place(countdown, R.x, R.y, R.w, R.h);
+      countdown.textContent = String(3 - Math.min(2, Math.floor((t - T.count) / 0.4)));
+      const c = Math.max(0, Math.min(3, t - T.rec));
+      card.seek(c);
+      show(bar, t >= T.rec && t < T.stop);
+      place(bar, R.x + (R.w - 340) / 2, R.y + R.h + 14);
+      bar.querySelector(".time").textContent = `00:0${Math.floor(c)}`;
+      bar.querySelector(".dot").style.opacity = 0.35 + 0.65 * Math.abs(Math.cos((c * Math.PI) / 1.2));
+      const frames = Math.floor(c * 15);
+      bar.querySelector(".meta").textContent = `${frames} frames · ≈${Math.round(frames * 1.9)} KB`;
+      bar.querySelector(".stop").classList.toggle("hover", Math.hypot(cx - STOP.x, cy - STOP.y) < 17);
+
+      // Editor opens after stopping; Save closes it and the toast appears.
+      const edK = span(t, T.edIn, T.edIn + 0.35);
+      show(editor, t >= T.edIn && t < T.toast);
+      place(editor, ED.x, ED.y + (1 - edK) * 24, ED.w, ED.h);
+      editor.style.opacity = edK * (1 - span(t, T.save + 0.05, T.toast));
+      const toastK = span(t, T.toast, T.toast + 0.3);
+      show(toast, t >= T.toast);
+      toast.style.transform = `translateY(${(1 - toastK) * 30}px)`;
+      toast.style.opacity = toastK;
+
+      const titleK = span(t, T.title, T.title + 0.6);
+      show(title, t >= T.title);
+      title.style.opacity = titleK;
+      show(cursor, t < T.title + 0.3);
+
+      const click = CLICKS.find((k) => t >= k && t < k + 0.35);
+      show(ripple, click !== undefined);
+      if (click !== undefined) {
+        const k = (t - click) / 0.35;
+        place(ripple, cx + 1, cy + 1);
+        ripple.style.transform = `scale(${0.5 + k})`;
+        ripple.style.opacity = 1 - k;
+      }
+    };
+  }
+  seek(0);
+</script>
+</body>
+</html>
