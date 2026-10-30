@@ -2,7 +2,7 @@
 
 **Windows용 빠르고 가벼운 GIF·애니메이션 WebP 화면 녹화기.**
 
-[English](README.md) · [변경 기록](CHANGELOG.md) · [설계 문서](docs/design.md)
+[웹사이트](https://raravel.github.io/zzalcam/ko/) · [English](README.md) · [변경 기록](CHANGELOG.md) · [설계 문서](docs/design.md)
 
 <p align="center">
   <img src="docs/images/banner.gif" alt="영역 선택, 녹화, 편집기에서 다듬기, 저장까지의 흐름" width="960">
