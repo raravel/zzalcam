@@ -23,3 +23,13 @@ cargo run --release -p zzalcam-cli -- encode target/banner.zzcs --preset best -o
 ```
 
 `best` is used because the wallpaper gradient bands visibly with `balanced`.
+
+## Website
+
+`site/` is published to https://raravel.github.io/zzalcam/ by `.github/workflows/pages.yml`, which
+adds `docs/images` and the app icon (the repository's Pages source must be set to GitHub Actions).
+Its link preview, `site/og.png`, is `og.html` here at 1200×630, rendered on Windows for the fonts:
+
+```
+python -c "import pathlib; from playwright.sync_api import sync_playwright as s; p = s().start(); b = p.chromium.launch(); g = b.new_page(viewport={'width': 1200, 'height': 630}); g.goto(pathlib.Path('docs/media/og.html').resolve().as_uri()); g.wait_for_load_state('networkidle'); g.screenshot(path='site/og.png'); b.close(); p.stop()"
+```

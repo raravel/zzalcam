@@ -2,7 +2,7 @@
 
 **Fast, small GIF and animated WebP screen recordings for Windows.**
 
-[한국어](README.ko.md) · [Changelog](CHANGELOG.md) · [Design notes](docs/design.md)
+[Website](https://raravel.github.io/zzalcam/) · [한국어](README.ko.md) · [Changelog](CHANGELOG.md) · [Design notes](docs/design.md)
 
 <p align="center">
   <img src="docs/images/banner.gif" alt="Picking a region, recording it, trimming in the editor and saving" width="960">

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>zzalcam — Free GIF &amp; WebP Screen Recorder for Windows</title>
+  <meta name="description" content="zzalcam is a free, open-source screen recorder for Windows that saves a window, a UI control, a region or a monitor as a small GIF or animated WebP in seconds.">
+  <meta name="keywords" content="zzalcam, gif recorder, gif screen recorder, screen to gif, gif maker, make a gif, gif capture, animated gif, webp, animated webp, screen recorder, screen recording, screen capture, record screen as gif, free screen recorder, windows screen recorder, windows 10, windows 11, open source">
+  <link rel="canonical" href="https://raravel.github.io/zzalcam/">
+  <link rel="alternate" hreflang="en" href="https://raravel.github.io/zzalcam/">
+  <link rel="alternate" hreflang="ko" href="https://raravel.github.io/zzalcam/ko/">
+  <link rel="alternate" hreflang="x-default" href="https://raravel.github.io/zzalcam/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="zzalcam">
+  <meta property="og:title" content="zzalcam — GIF and WebP screen recorder for Windows">
+  <meta property="og:description" content="Record a window, a control, a region or a monitor and save it as a small GIF or WebP in seconds. Free and open source.">
+  <meta property="og:url" content="https://raravel.github.io/zzalcam/">
+  <meta property="og:image" content="https://raravel.github.io/zzalcam/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="The zzalcam logo and editor">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ko_KR">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="stylesheet" href="style.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "@id": "https://raravel.github.io/zzalcam/#app",
+    "name": "zzalcam",
+    "alternateName": "짤캠",
+    "description": "Fast, small GIF and animated WebP screen recorder for Windows.",
+    "keywords": "GIF recorder, screen to GIF, screen recorder, screen capture, WebP",
+    "url": "https://raravel.github.io/zzalcam/",
+    "applicationCategory": "MultimediaApplication",
+    "operatingSystem": "Windows 10, Windows 11",
+    "downloadUrl": "https://github.com/raravel/zzalcam/releases/latest",
+    "license": "https://www.gnu.org/licenses/gpl-3.0.html",
+    "screenshot": "https://raravel.github.io/zzalcam/images/editor-en-light.png",
+    "inLanguage": ["en", "ko"],
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+  }
+  </script>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a class="brand" href="./"><img src="favicon-32.png" alt="" width="28" height="28">zzalcam</a>
+      <nav>
+        <a class="optional" href="#features">Features</a>
+        <a class="optional" href="#install">Install</a>
+        <a href="https://github.com/raravel/zzalcam">GitHub</a>
+        <a href="ko/" hreflang="ko" lang="ko">한국어</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <h1>Record your screen as a GIF in seconds</h1>
+        <p>zzalcam records a window, a single UI control, a region or a whole monitor on Windows and saves it as a GIF or animated WebP that is as small as it can be without looking worse.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/raravel/zzalcam/releases/latest">Download for Windows</a>
+          <a class="button" href="https://github.com/raravel/zzalcam">Source on GitHub</a>
+        </div>
+        <p class="note">Free and open source (GPL-3.0-or-later) · Windows 10 2004 or later, x64</p>
+        <div class="banner">
+          <picture>
+            <source media="(prefers-reduced-motion: reduce) and (prefers-color-scheme: dark)" srcset="images/editor-en-dark.png" width="1120" height="760">
+            <source media="(prefers-reduced-motion: reduce)" srcset="images/editor-en-light.png" width="1120" height="760">
+            <img src="images/banner.gif" width="960" height="480" alt="Picking a region, recording it, trimming in the editor and saving">
+          </picture>
+        </div>
+      </div>
+
+      <section id="features">
+        <h2>Features</h2>
+        <ul class="features">
+          <li>
+            <h3>Pick anything</h3>
+            <p>One hotkey opens a picker over every monitor: drag a region, click a window, press <kbd>Tab</kbd> for a single control, <kbd>F</kbd> for a monitor, <kbd>A</kbd> for all of them. A magnifier helps with pixel-exact edges.</p>
+          </li>
+          <li>
+            <h3>Small files</h3>
+            <p>Each GIF frame keeps only what changed, unchanged pixels turn transparent and one palette is shared. In our benchmark, up to about 31 % smaller than gifski at the same PSNR.</p>
+          </li>
+          <li>
+            <h3>Fast</h3>
+            <p>On a 16-thread desktop CPU, a 10-second 1080p clip was saved in under three seconds and recording used about 1 % CPU. Frames are stored only when the screen changes.</p>
+          </li>
+          <li>
+            <h3>GIF or WebP, with a size limit</h3>
+            <p>Ask for "under 8 MB" and zzalcam lowers quality, then frame rate, then size until it fits, and tells you what it changed.</p>
+          </li>
+          <li>
+            <h3>Editor</h3>
+            <p>Trim, delete frames, crop, preview at real speed, undo and redo, with a live size estimate.</p>
+          </li>
+          <li>
+            <h3>Made for sharing</h3>
+            <p>The saved file goes to the clipboard, ready to paste into Discord or Slack. The border, control bar and notifications never appear in the recording.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="screenshots">
+        <h2>Screenshots</h2>
+        <div class="shots">
+          <figure>
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="images/editor-en-dark.png">
+              <img src="images/editor-en-light.png" width="560" height="380" alt="The editor: frame strip, trim, crop and size estimate" loading="lazy">
+            </picture>
+            <figcaption>Editor</figcaption>
+          </figure>
+          <figure>
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="images/settings-en-dark.png">
+              <img src="images/settings-en-light.png" width="330" height="377" alt="Settings: hotkeys, output format and folder" loading="lazy">
+            </picture>
+            <figcaption>Settings</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="uses">
+        <h2>Good for</h2>
+        <ul class="features">
+          <li>
+            <h3>Making GIFs and memes</h3>
+            <p>Record a scene from a browser, player or game window straight into a GIF or WebP, with no screen recording to convert afterwards.</p>
+          </li>
+          <li>
+            <h3>Bug reports and how-tos</h3>
+            <p>Capture just one window or button as a GIF and paste it into an issue, a chat or a document. Files stay small enough for upload limits.</p>
+          </li>
+          <li>
+            <h3>A light, free recorder</h3>
+            <p>Made GIFs with ScreenToGif, LICEcap or Honeycam before? zzalcam is a free, open-source screen recorder for the same job, with no ads, no watermark and no paid tier.</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="install">
+        <h2>Install and use</h2>
+        <div class="cols">
+          <div>
+            <h3>Install</h3>
+            <p>Download the installer or the portable zip from <a href="https://github.com/raravel/zzalcam/releases/latest">Releases</a>.</p>
+            <ul>
+              <li>Windows 10 version 2004 or later, x64.</li>
+              <li>The installer sets up Microsoft WebView2 if it is missing (it ships with Windows 11). The portable build expects WebView2 to be installed already.</li>
+              <li>Releases are not code-signed yet, so SmartScreen may warn on first launch (<em>More info → Run anyway</em>).</li>
+              <li>A command-line tool, <code>zzalcam-cli</code>, records and encodes from scripts.</li>
+            </ul>
+          </div>
+          <div>
+            <h3>Hotkeys</h3>
+            <table>
+              <thead><tr><th scope="col">Action</th><th scope="col">Default</th></tr></thead>
+              <tr><td>Pick a target and record / stop</td><td><kbd>Alt+Shift+1</kbd></td></tr>
+              <tr><td>Pause / resume</td><td><kbd>Alt+Shift+2</kbd></td></tr>
+              <tr><td>Record the last target again</td><td><kbd>Alt+Shift+3</kbd></td></tr>
+              <tr><td>Cancel the recording</td><td><kbd>Alt+Shift+X</kbd></td></tr>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      zzalcam is free software under the <a href="https://github.com/raravel/zzalcam/blob/main/LICENSE">GPL-3.0-or-later</a> license ·
+      <a href="https://github.com/raravel/zzalcam/blob/main/CHANGELOG.md">Changelog</a> ·
+      <a href="https://github.com/raravel/zzalcam/issues">Report an issue</a>
+      <p>Honeycam, ScreenToGif and LICEcap are trademarks of their respective owners; zzalcam is not affiliated with them.</p>
+    </footer>
+  </div>
+</body>
+</html>

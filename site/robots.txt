@@ -1,0 +1,6 @@
+# Crawlers only read robots.txt at the domain root (raravel.github.io), which this project
+# does not serve; submit sitemap.xml in Google Search Console and Naver Search Advisor instead.
+User-agent: *
+Allow: /
+
+Sitemap: https://raravel.github.io/zzalcam/sitemap.xml
